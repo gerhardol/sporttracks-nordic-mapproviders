@@ -29,6 +29,7 @@ using System.Reflection;
 using System.Diagnostics;
 using System.Text.RegularExpressions;
 
+#if ST_2_1
 namespace Lofas.SportsTracks.Hitta_SE_MapProvider
 {
     [Guid("0BE4F711-316A-4d8a-B259-6B08BDD8438F")]
@@ -951,3 +952,4 @@ myObj = s3;
         #endregion
     }
 }
+#endif
