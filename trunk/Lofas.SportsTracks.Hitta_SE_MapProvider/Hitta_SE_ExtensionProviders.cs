@@ -18,12 +18,18 @@ License along with this library. If not, see <http://www.gnu.org/licenses/>.
 using System;
 using System.Collections.Generic;
 using System.Text;
+using ZoneFiveSoftware.Common.Visuals.Fitness;
+#if ST_2_1
+using ZoneFiveSoftware.Common.Visuals.Fitness.GPS;
+#else
+using ZoneFiveSoftware.Common.Visuals.Mapping;
+#endif
 
 namespace Lofas.SportsTracks.Hitta_SE_MapProvider
 {
+#if ST_2_1
     public class Hitta_SE_ExtensionProviders : ZoneFiveSoftware.Common.Visuals.Fitness.IExtendMapProviders
     {
-        #region IExtendMapProviders Members
         static List<ZoneFiveSoftware.Common.Visuals.Fitness.GPS.IMapProvider> m_List = null;
         static Hitta_SE_ExtensionProviders()
         {
@@ -33,13 +39,35 @@ namespace Lofas.SportsTracks.Hitta_SE_MapProvider
             m_List.Add(new Eniro_SE_MapProvider());
             m_List.Add(new Eniro_SE_MapProvider("Map"));
             m_List.Add(new Eniro_SE_MapProvider("Nat"));
-            //m_List.Add(new Eniro_SE_MapProvider("Map","FI_fi"));
+            //m_List.Add(new Eniro_SE_MapProvider("Map", "FI_fi"));
         }
+        #region IExtendMapProviders Members
         public IList<ZoneFiveSoftware.Common.Visuals.Fitness.GPS.IMapProvider> MapProviders
         {
             get { return m_List; }
         }
-
         #endregion
     }
+#else
+
+    public class Hitta_SE_ExtensionProviders : IExtendMapTileProviders
+    {
+        static List<IMapTileProvider> m_List = new List<IMapTileProvider>();
+        static Hitta_SE_ExtensionProviders()
+        {
+            //m_List.Add(new Hitta_SE_MapProvider());
+            //m_List.Add(new Hitta_SE_MapProvider("Map"));
+            //Eniro not working now
+            //m_List.Add(new Eniro_SE_MapProvider());
+            //m_List.Add(new Eniro_SE_MapProvider("Map"));
+            //m_List.Add(new Eniro_SE_MapProvider("Nat"));
+            //m_List.Add(new Eniro_SE_MapProvider("Map","FI_fi"));
+        }
+        public IList<ZoneFiveSoftware.Common.Visuals.Mapping.IMapTileProvider> MapTileProviders
+        {
+            get { return m_List; }
+        }
+    }
+#endif
+
 }

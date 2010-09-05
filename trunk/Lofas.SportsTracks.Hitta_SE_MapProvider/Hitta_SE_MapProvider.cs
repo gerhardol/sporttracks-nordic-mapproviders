@@ -27,6 +27,7 @@ using System.Net;
 using System.Globalization;
 using Lofas.Projection;
 
+#if ST_2_1
 namespace Lofas.SportsTracks.Hitta_SE_MapProvider
 {
     [Guid("23FBB14A-0949-4d42-BAA4-95C3AC3BC825")]
@@ -513,3 +514,4 @@ namespace Lofas.SportsTracks.Hitta_SE_MapProvider
         #endregion
     }
 }
+#endif
