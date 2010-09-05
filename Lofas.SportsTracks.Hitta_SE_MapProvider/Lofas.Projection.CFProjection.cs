@@ -83,11 +83,11 @@ namespace Lofas.Projection
         ** RES60 = 60 * RES
         ** CONV = 180 * 3600 * RES / PI (radians to RES seconds)
         */
-	    static double
-            //RES = 1000.0,
-            //RES60 = 60000.0,
+	    /*static double
+            RES = 1000.0,
+            RES60 = 60000.0,
             CONV = 206264806.24709635515796003417;
-
+        */
              private static double[] vm = {
 	            .0174532925199433,
 	            .0002908882086657216,
