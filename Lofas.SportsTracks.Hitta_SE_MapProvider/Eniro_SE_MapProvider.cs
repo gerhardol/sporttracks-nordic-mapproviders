@@ -175,7 +175,7 @@ namespace Lofas.SportsTracks.Hitta_SE_MapProvider
 
             //double useZoomLevel = ZOOM_LEVELS[ZOOM_LEVELS.Length - 1];
             double useScale = scaleValues[scaleValues.Length - 1];
-            double minDist = Double.MaxValue;
+            //double minDist = Double.MaxValue;
             /*for (int i = ZOOM_LEVELS.Length - 1; i >= 0; i--)
             {
                 if (Math.Abs(zoomLevel - ZOOM_LEVELS[i]) < minDist)
@@ -408,7 +408,7 @@ namespace Lofas.SportsTracks.Hitta_SE_MapProvider
                             obj.Scale = useZoomLevel;
                             listener.NotifyMapImageReady(obj);
                         }
-                        catch (Exception ee)
+                        catch (Exception)
                         {
                         }
                         finally
@@ -431,7 +431,7 @@ namespace Lofas.SportsTracks.Hitta_SE_MapProvider
             {
                 return Image.FromFile(str);
             }
-            catch (Exception ee)
+            catch (Exception)
             {
                 try
                 {
@@ -800,7 +800,7 @@ myObj = s3;
                         startTileX_IDX = Convert.ToInt32(mEvType.GetMethod("get_OffsetX").Invoke(evaluator, null));//Convert.ToInt32(op["offsetX"]);
                         startTileY_IDX = Convert.ToInt32(mEvType.GetMethod("get_OffsetY").Invoke(evaluator, null));//Convert.ToInt32(op["offsetY"]);
                     }
-                    catch (Exception ee)
+                    catch (Exception)
                     {
                         //Failed to du Javascript Lookup, try to fall back on core, lookup instead..
                         Regex rex = new Regex("s3\\.dpi=(?<dpi>\\d+);", RegexOptions.Singleline);

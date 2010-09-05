@@ -39,19 +39,19 @@ namespace Lofas.Projection
         static double Geocent_a = 6378137.0;     /* Semi-major axis of ellipsoid in meters */
         static double Geocent_b = 6356752.3142;  /* Semi-minor axis of ellipsoid           */
 
-        static double Geocent_a2 = 40680631590769.0;        /* Square of semi-major axis */
-        static double Geocent_b2 = 40408299984087.05;       /* Square of semi-minor axis */
+        //static double Geocent_a2 = 40680631590769.0;        /* Square of semi-major axis */
+        //static double Geocent_b2 = 40408299984087.05;       /* Square of semi-minor axis */
         static double Geocent_e2 = 0.0066943799901413800;   /* Eccentricity squared  */
         static double Geocent_ep2 = 0.00673949675658690300; /* 2nd eccentricity squared */
 
 
-         private static double HALFPI	=	1.5707963267948966;
-        private static double FORTPI	=	0.78539816339744833;
+        private static double HALFPI	=	1.5707963267948966;
+        //private static double FORTPI	=	0.78539816339744833;
         private static double PI		=3.14159265358979323846;
         private static double TWOPI	=	6.2831853071795864769;
         private static double PI_OVER_2 =(PI / 2.0e0);
-        private static double FALSE     = 0;
-        private static double TRUE      = 1;
+        //private static double FALSE     = 0;
+        //private static double TRUE      = 1;
         private static double COS_67P5  = 0.38268343236508977;  /* cosine of 67.5 degrees */
         private static double AD_C      = 1.0026000;            /* Toms region 1 constant */
         private static double FC1 =1.0;
@@ -84,8 +84,8 @@ namespace Lofas.Projection
         ** CONV = 180 * 3600 * RES / PI (radians to RES seconds)
         */
 	    static double
-            RES = 1000.0,
-            RES60 = 60000.0,
+            //RES = 1000.0,
+            //RES60 = 60000.0,
             CONV = 206264806.24709635515796003417;
 
              private static double[] vm = {
@@ -107,13 +107,13 @@ namespace Lofas.Projection
             double y = lat * deg2rad;
             double x = lon * deg2rad;
             double z = height;
-            double lam = 0, phi = 0, h = 0;
-            double src_a, src_es, dst_a, dst_es;
+            double lam = 0, phi = 0/*, h = 0*/;
+            double /*src_a, src_es,*/ dst_a, dst_es;
             double lam0, k0, esp, ml0, fr_meter, x0, y0;
             double[] en;
 
-            src_a = 6378137.0000000000;
-            src_es = 0.0066943799901413165;
+            //src_a = 6378137.0000000000;
+            //src_es = 0.0066943799901413165;
             dst_a = 6378137.0000000000;
             dst_es = 0.0066943799901413165;
 
@@ -171,9 +171,9 @@ namespace Lofas.Projection
         /// <param name="lon">WGS84 Lon (northing)</param>
         public static void SWEREF99TMToWGS84(double x, double y, out double lat, out double lon)
         {
-            double lam = 0, phi = 0, h = 0;
-            double src_a, src_es, dst_a, dst_es;
-            double lam0, k0, esp, ml0, fr_meter, to_meter, x0, y0;
+            double lam = 0, phi = 0/*, h = 0*/;
+            double /*src_a,*/ src_es/*, dst_a, dst_es*/;
+            double lam0, k0, esp, ml0, /*fr_meter,*/ to_meter, x0, y0;
             double[] en;
             double ra;
 
@@ -181,9 +181,9 @@ namespace Lofas.Projection
 
             ra = 1.5678559428873979e-007;
 
-            dst_a = 6378137.0000000000;
-            dst_es = 0.0066943799901413165;
-            src_a = 6378137.0000000000;
+            //dst_a = 6378137.0000000000;
+            //dst_es = 0.0066943799901413165;
+            //src_a = 6378137.0000000000;
             src_es = 0.0066943799901413165;
 
 
@@ -192,7 +192,7 @@ namespace Lofas.Projection
             k0 = 0.99960000000000004;
             x0 = 500000.0000000000;
             y0 = 0.0;
-            fr_meter = 1.0;
+            //fr_meter = 1.0;
             to_meter = 1.0;
             esp = 0.0067394967422764341;
             en = new double[5];
@@ -261,9 +261,9 @@ namespace Lofas.Projection
         /// <param name="lon">WGS84 Northing</param>
         public static void RT90ToWGS84(double x, double y, out double lat, out double lon)
         {
-            double lam=0, phi=0, h=0;
+            double lam=0, phi=0/*, h=0*/;
             double src_a, src_es, dst_a, dst_es;
-            double lam0, k0, esp, ml0, fr_meter, to_meter, x0, y0;
+            double lam0, k0, esp, ml0, /*fr_meter,*/ to_meter, x0, y0;
             double[] en;
             double ra;
 
@@ -281,7 +281,7 @@ namespace Lofas.Projection
             k0 = 1.0000000000000000;
             x0 = 1500000.0000000000;
             y0 = 0.0;
-            fr_meter = 1.0;
+            //fr_meter = 1.0;
             to_meter = 1.0;
             esp = 0.0067192187991747592;
             en = new double[5];
@@ -296,7 +296,7 @@ namespace Lofas.Projection
             x = (x * to_meter - x0) * ra;
             y = (y * to_meter - y0) * ra;
 
-            double s;
+            //double s;
             phi = inv_mlfn(ml0 + y / k0, src_es, en);
             lam = 0;
             if (Math.Abs(phi) >= HALFPI)
@@ -648,10 +648,10 @@ namespace Lofas.Projection
             double CPHI;     /* cos of searched geodetic latitude */
             double SPHI;     /* sin of searched geodetic latitude */
             double SDPHI;    /* end-criterium: addition-theorem of sin(Latitude(iter)-Latitude(iter-1)) */
-            bool At_Pole;     /* indicates location is in polar region */
+            //bool At_Pole;     /* indicates location is in polar region */
             int iter;        /* # of continous iteration, max. 30 is always enough (s.a.) */
 
-            At_Pole = false;
+            //At_Pole = false;
             P = Math.Sqrt(X * X + Y * Y);
             RR = Math.Sqrt (X * X + Y * Y + Z * Z);
 
@@ -660,7 +660,7 @@ namespace Lofas.Projection
             {
 
                 /*  special case, if P=0. (X=0., Y=0.) */
-                At_Pole = true;
+                //At_Pole = true;
                 Longitude = 0.0;
 
                 /*  if (X,Y,Z)=(0.,0.,0.) then Height becomes semi-minor axis
@@ -749,7 +749,7 @@ namespace Lofas.Projection
 
         private static int geocentric_to_wgs84(ref double x, ref double y, ref double z, double[] datumParams)
         {
-            int i;
+            //int i;
 
             double x_out, y_out, z_out;
             double Rx_BF, Ry_BF, Rz_BF, Dx_BF, Dy_BF, Dz_BF, M_BF;
@@ -779,7 +779,7 @@ namespace Lofas.Projection
         private static int geocentric_to_geodetic(double a, double es, ref double x, ref double y, ref double z)
         {
             double b;
-            int i;
+            //int i;
             if (es == 0)
                 b = a;
             else
@@ -797,7 +797,7 @@ namespace Lofas.Projection
                                ref double x, ref double y, ref double z)
         {
             double b;
-            int i;
+            //int i;
 
             if (es == 0.0)
                 b = a;
