@@ -34,31 +34,31 @@ namespace Lofas.SportsTracks.Hitta_SE_MapProvider
         static Hitta_SE_ExtensionProviders()
         {
             m_List = new List<ZoneFiveSoftware.Common.Visuals.Fitness.GPS.IMapProvider>();
-            m_List.Add(new Hitta_SE_MapProvider());
+            m_List.Add(new Hitta_SE_MapProvider("Sat"));
             m_List.Add(new Hitta_SE_MapProvider("Map"));
-            m_List.Add(new Eniro_SE_MapProvider());
+            m_List.Add(new Eniro_SE_MapProvider("Sat"));
             m_List.Add(new Eniro_SE_MapProvider("Map"));
             m_List.Add(new Eniro_SE_MapProvider("Nat"));
             //m_List.Add(new Eniro_SE_MapProvider("Map", "FI_fi"));
         }
-        #region IExtendMapProviders Members
+    #region IExtendMapProviders Members
         public IList<ZoneFiveSoftware.Common.Visuals.Fitness.GPS.IMapProvider> MapProviders
         {
             get { return m_List; }
         }
-        #endregion
+    #endregion
     }
 #else
 
     public class Hitta_SE_ExtensionProviders : IExtendMapTileProviders
     {
-        static List<IMapTileProvider> m_List = new List<IMapTileProvider>();
+        static IList<IMapTileProvider> m_List = new List<IMapTileProvider>();
         static Hitta_SE_ExtensionProviders()
         {
-            //m_List.Add(new Hitta_SE_MapProvider());
-            //m_List.Add(new Hitta_SE_MapProvider("Map"));
+            m_List.Add(new Hitta_SE_MapProvider("Sat"));
+            m_List.Add(new Hitta_SE_MapProvider("Map"));
             //Eniro not working now
-            //m_List.Add(new Eniro_SE_MapProvider());
+            //m_List.Add(new Eniro_SE_MapProvider("Sat"));
             //m_List.Add(new Eniro_SE_MapProvider("Map"));
             //m_List.Add(new Eniro_SE_MapProvider("Nat"));
             //m_List.Add(new Eniro_SE_MapProvider("Map","FI_fi"));
@@ -67,6 +67,7 @@ namespace Lofas.SportsTracks.Hitta_SE_MapProvider
         {
             get { return m_List; }
         }
+
     }
 #endif
 

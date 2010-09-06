@@ -26,34 +26,58 @@ using System.Threading;
 using System.Net;
 using System.Globalization;
 using Lofas.Projection;
-
+using ZoneFiveSoftware.Common.Data.GPS;
 #if ST_2_1
+using ZoneFiveSoftware.Common.Visuals.Fitness.GPS;
+#else
+using ZoneFiveSoftware.Common.Visuals.Mapping;
+#endif
+
 namespace Lofas.SportsTracks.Hitta_SE_MapProvider
 {
-    [Guid("23FBB14A-0949-4d42-BAA4-95C3AC3BC825")]
-    public class Hitta_SE_MapProvider : ZoneFiveSoftware.Common.Visuals.Fitness.GPS.IMapProvider
+    public class Hitta_SE_MapProvider : 
+#if ST_2_1
+        ZoneFiveSoftware.Common.Visuals.Fitness.GPS.IMapProvider
+#else
+        ZoneFiveSoftware.Common.Visuals.Mapping.IMapTileProvider
+#endif
     {
-        #region IMapProvider Members
+    #region IMapProvider Members
 
-        string m_CacheDirectory;
-        Dictionary<string, string> m_DownloadQueueItems;
+        const int tileX2 = 128;
+        const int tileY2 = 128;
+        private readonly string m_CacheDirectory;
+        private readonly Dictionary<string, string> m_DownloadQueueItems;
 
-        string m_View;
-        string m_ImageExt;
+        private readonly string m_View;
+        private readonly string m_ImageExt;
+        private readonly string m_Name;
+        private readonly Guid m_GUID;
+        private readonly Hitta_SE_MapProjection m_Proj = new Hitta_SE_MapProjection();
 
-        public Hitta_SE_MapProvider()
-            : this("Sat")
-        {
-        }
         public Hitta_SE_MapProvider(string view)
         {
             m_View = view;
-            m_CacheDirectory = Path.Combine(Plugin.m_Application.SystemPreferences.WebFilesFolder, "MapTiles" + Path.DirectorySeparatorChar + "Hitta_SE_" + view);
-            //m_CacheDirectory = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.CommonApplicationData), "ZoneFiveSoftware" + Path.DirectorySeparatorChar + "SportTracks" + Path.DirectorySeparatorChar + "2.0" + Path.DirectorySeparatorChar + "Web Files" + Path.DirectorySeparatorChar + "MapTiles" + Path.DirectorySeparatorChar + "Hitta_SE_" + view);
+            m_CacheDirectory = Path.Combine(
+#if ST_2_1
+                Plugin.m_Application.SystemPreferences.WebFilesFolder, "MapTiles" + 
+#else
+                Plugin.m_Application.Configuration.CommonWebFilesFolder, GUIDs.PluginMain.ToString() + 
+#endif
+                Path.DirectorySeparatorChar + "Hitta_SE_" + view);
             m_DownloadQueueItems = new Dictionary<string, string>();
             if (m_View == "Sat")
+            {
                 m_ImageExt = "jpg";
-            else m_ImageExt = "gif";
+                m_GUID = new Guid("23FBB14A-0949-4d42-BAA4-95C3AC3BC825");
+                m_Name = "Hitta.se Flygfoto";
+            }
+            else
+            {
+                m_ImageExt = "gif";
+                m_GUID = new Guid("9BD470DD-3078-456f-8175-1A714D286B90");
+                m_Name = "Hitta.se Karta";
+            }
         }
 
         public void ClearDownloadQueue()
@@ -66,17 +90,10 @@ namespace Lofas.SportsTracks.Hitta_SE_MapProvider
             get { return m_DownloadQueueItems.Count; }
         }
 
-        //double[] ZOOM_LEVELS = { 0.2, 0.8, 2, 4, 10, 25, 70, 200, 700, 3500 };
-        //double[] scaleValues = { 756, 3024, 7559, 15118, 37795, 94488, 264567, 755906, 2645669, 13228346 };
-
-        double[] ZOOM_LEVELS = { 0.2, 0.5, 2, 4, 10, 25, 70, 200, 700, 3500 };
-        double[] scaleValues = { 756, 1890, 7559, 15118, 37795, 94488, 264567, 755906, 2645669, 13228346 };
-
-
         int m_DownloadQueue = 0;
-        public int DrawMap(ZoneFiveSoftware.Common.Visuals.Fitness.GPS.IMapImageReadyListener listener, System.Drawing.Graphics graphics, System.Drawing.Rectangle drawRectangle, System.Drawing.Rectangle clipRectangle, ZoneFiveSoftware.Common.Data.GPS.IGPSLocation center, double zoomLevel)
+        public int DrawMap(IMapImageReadyListener listener, System.Drawing.Graphics graphics, System.Drawing.Rectangle drawRectangle, System.Drawing.Rectangle clipRectangle, ZoneFiveSoftware.Common.Data.GPS.IGPSLocation center, double zoomLevel)
         {
-            double x, y, origx, origy;
+            double x, y;//, origx, origy;
 
             if (center.LatitudeDegrees < 0 || center.LongitudeDegrees < 0 || center.LongitudeDegrees > 40)
                 return 0;
@@ -85,71 +102,30 @@ namespace Lofas.SportsTracks.Hitta_SE_MapProvider
 
             int numQueued = DrawTiles(listener, graphics, ref drawRectangle, zoomLevel, x, y);
 
-
-
             return numQueued;
         }
 
-        private double getMetersPerPixel(double zoomLevel, out double tileMeterPerPixel, out double hittascale)
-        {
-            double useZoomLevel = ZOOM_LEVELS[ZOOM_LEVELS.Length - 1];
-            double useScale = scaleValues[scaleValues.Length - 1];
-            double minDist = Double.MaxValue;
-            /*for (int i = ZOOM_LEVELS.Length - 1; i >= 0; i--)
-            {
-                if (Math.Abs(zoomLevel - ZOOM_LEVELS[i]) < minDist)
-                {
-                    useZoomLevel = ZOOM_LEVELS[i];
-                    useScale = scaleValues[i];
-                    minDist = Math.Abs(zoomLevel - ZOOM_LEVELS[i]);
-                }
-            }*/
 
-            int zoomLevelInt = (int)Math.Floor(zoomLevel);
-            int level1 = zoomLevelInt;
-            int level2 = zoomLevelInt + 1;
-            double zoomLevelRest = zoomLevel - zoomLevelInt;
-            useZoomLevel = ZOOM_LEVELS[zoomLevelInt];
-            tileMeterPerPixel = useZoomLevel;
-            useScale = scaleValues[zoomLevelInt];
-            if (zoomLevelRest > 0.5)
-            {
-                tileMeterPerPixel = ZOOM_LEVELS[zoomLevelInt + 1];
-                useScale = scaleValues[zoomLevelInt+1];
-            }
-
-           
-            if (level2 < ZOOM_LEVELS.Length && zoomLevelRest > 1e-6)
-                useZoomLevel += (zoomLevelRest * (ZOOM_LEVELS[level2] - ZOOM_LEVELS[level1]));
-
-            
-
-            hittascale = useScale;
-
-            
-            return useZoomLevel;
-        }
-
-        private int DrawTiles(ZoneFiveSoftware.Common.Visuals.Fitness.GPS.IMapImageReadyListener listener, System.Drawing.Graphics graphics, ref System.Drawing.Rectangle drawRectangle, double zoomLevel, double x, double y)
+        private int DrawTiles(IMapImageReadyListener listener, System.Drawing.Graphics graphics, ref System.Drawing.Rectangle drawRectangle, double zoomLevel, double x, double y)
         {
             double useScale;
             double tileMeterPerPixel;
-            double metersPerPixel = getMetersPerPixel(zoomLevel, out tileMeterPerPixel, out useScale);
+            double metersPerPixel = m_Proj.getMetersPerPixel(zoomLevel, out tileMeterPerPixel, out useScale);
 
             double ulX = Math.Round(x - ((drawRectangle.Width / 2) * metersPerPixel),1);
             double ulY = Math.Round(y + ((drawRectangle.Height / 2) * metersPerPixel),1);
             double lrX = Math.Round(x + ((drawRectangle.Width / 2) * metersPerPixel),1);
             double lrY = Math.Round(y - ((drawRectangle.Height / 2) * metersPerPixel),1);
 
-            double tileWidth = 256 * tileMeterPerPixel;
+            double tileWidth = 2*tileX2 * tileMeterPerPixel;
 
             double tileDrawWidth = (tileWidth / metersPerPixel);
 
 
             double rx = ulX;
 
-            double startTileX = Math.Round(((int)(ulX / (tileMeterPerPixel * 256)) + 0) * tileMeterPerPixel * 256 - 0.5, 1);
-            double startTileY = Math.Round(((int)(ulY / (tileMeterPerPixel * 256)) + 1) * tileMeterPerPixel * 256 - 0.5, 1);
+            double startTileX = Math.Round(((int)(ulX / (tileMeterPerPixel * 2*tileX2)) + 0) * tileMeterPerPixel * 2*tileX2 - 0.5, 1);
+            double startTileY = Math.Round(((int)(ulY / (tileMeterPerPixel * 2*tileY2)) + 1) * tileMeterPerPixel * 2*tileY2 - 0.5, 1);
 
             ////beräkna offset vid utritning..
             //double drawTileDX = (startTileX - ulX) / metersPerPixel;
@@ -161,19 +137,19 @@ namespace Lofas.SportsTracks.Hitta_SE_MapProvider
             int bottomLeftX = 451424;
             int bottomLeftY = 5651424;
 
-            double resolution = ZOOM_LEVELS[Array.IndexOf(scaleValues, useScale)];
-            int Tcolumn = (int)(((startTileX + tileMeterPerPixel * 128 - bottomLeftX)) / (256 * resolution));
-            int Trow = (int)(((startTileY - tileMeterPerPixel * 128 - bottomLeftY)) / (256 * resolution));
+            double resolution = m_Proj.ZOOM_LEVELS[Array.IndexOf(m_Proj.scaleValues, useScale)];
+            int Tcolumn = (int)(((startTileX + tileMeterPerPixel * tileX2 - bottomLeftX)) / (2*tileX2 * resolution));
+            int Trow = (int)(((startTileY - tileMeterPerPixel * tileY2 - bottomLeftY)) / (2*tileY2 * resolution));
 
-            double colX = Tcolumn * 256 * resolution + bottomLeftX;
-            double rowY = Trow * 256 * resolution + bottomLeftY;
+            double colX = Tcolumn * 2*tileX2 * resolution + bottomLeftX;
+            double rowY = Trow * 2*tileY2 * resolution + bottomLeftY;
 
             
 
             if (rowY < ulY)
             {
                 Trow++;
-                rowY = Trow * 256 * resolution + bottomLeftY;
+                rowY = Trow * 2*tileY2 * resolution + bottomLeftY;
             }
 
             //double x_Diff = startTileX - colX;
@@ -219,22 +195,19 @@ namespace Lofas.SportsTracks.Hitta_SE_MapProvider
                 
             }
 
-            int endTcolumn = (int)Math.Round(((lrX + tileMeterPerPixel * 128 - bottomLeftX)) / (256 * resolution), 0);
-            lrX = endTcolumn * 256 * resolution + bottomLeftX + tileDrawWidth;
+            int endTcolumn = (int)Math.Round(((lrX + tileMeterPerPixel * tileX2 - bottomLeftX)) / (2*tileX2 * resolution), 0);
+            lrX = endTcolumn * 2*tileX2 * resolution + bottomLeftX + tileDrawWidth;
             //ulY = rowY + tileDrawWidth;
 
-            int lowerTrow = (int)Math.Round(((lrY - tileMeterPerPixel * 128 - bottomLeftY)) / (256 * resolution), 0);
-            lrY = lowerTrow * 256 * resolution + bottomLeftY;
+            int lowerTrow = (int)Math.Round(((lrY - tileMeterPerPixel * tileY2 - bottomLeftY)) / (2*tileY2 * resolution), 0);
+            lrY = lowerTrow * 2*tileY2 * resolution + bottomLeftY;
             //lrX += tileDrawWidth;
             double drawTileDX = (startTileX - ulX) / metersPerPixel;
             double drawTileDY = (ulY - startTileY) / metersPerPixel;
             startTileY = rowY + tileDrawWidth;
 
 #endif
-
             
-
-
             rx = startTileX;
 
             int col = 0;
@@ -247,8 +220,8 @@ namespace Lofas.SportsTracks.Hitta_SE_MapProvider
                 int row = 0;
                 while (ry >= lrY)
                 {
-                    int iRx = (int)Math.Round((rx + tileMeterPerPixel * 128) * 10);
-                    int iRy = (int)Math.Round((ry - tileMeterPerPixel * 128) * 10);
+                    int iRx = (int)Math.Round((rx + tileMeterPerPixel * tileX2) * 10);
+                    int iRy = (int)Math.Round((ry - tileMeterPerPixel * tileY2) * 10);
 
                     if (isCached(iRx, iRy, useScale))
                     {
@@ -263,16 +236,16 @@ namespace Lofas.SportsTracks.Hitta_SE_MapProvider
                     }
                     else
                     {
-                        queueDownload(rx, ry,iRx,iRy, useScale, listener);
+                        queueDownload(rx, ry, iRx, iRy, useScale, listener);
                         numQueued++;
                         m_DownloadQueue++;
                     }
-                    ry -= 256 * tileMeterPerPixel;
+                    ry -= 2*tileY2 * tileMeterPerPixel;
                     row++;
                 }
                 //break;
                 col++;
-                rx += 256 * tileMeterPerPixel;
+                rx += 2*tileX2 * tileMeterPerPixel;
             }
 
 
@@ -285,8 +258,9 @@ namespace Lofas.SportsTracks.Hitta_SE_MapProvider
             public double cy;
             public double Scale;
         }
+
         WebClient wc = new WebClient();
-        private void queueDownload(double cx, double cy, int iRx, int iRy, double useZoomLevel,ZoneFiveSoftware.Common.Visuals.Fitness.GPS.IMapImageReadyListener listener)
+        private void queueDownload(double cx, double cy, int iRx, int iRy, double useZoomLevel, IMapImageReadyListener listener)
         {
             string item = iRx + "_" + iRy + "_" + useZoomLevel.ToString();
             if (!m_DownloadQueueItems.ContainsKey(item))
@@ -310,13 +284,12 @@ namespace Lofas.SportsTracks.Hitta_SE_MapProvider
 #else
                                     int bottomLeftX = 451424;
                                     int bottomLeftY = 5651424;
-                                    double resolution = ZOOM_LEVELS[Array.IndexOf(scaleValues, useZoomLevel)];
-                                    //int column = (int)Math.Round(((cx  - bottomLeftX + ((256 / 2) *resolution))) / (256 * resolution), 0);
-                                    //int row = (int)Math.Round(((cy - bottomLeftY + ((256 / 2) * resolution))) / (256 * resolution), 0);
+                                    double resolution = m_Proj.ZOOM_LEVELS[Array.IndexOf(m_Proj.scaleValues, useZoomLevel)];
+                                    //int column = (int)Math.Round(((cx  - bottomLeftX + ((2*tileX2 / 2) *resolution))) / (2*tileX2 * resolution), 0);
+                                    //int row = (int)Math.Round(((cy - bottomLeftY + ((2*tileY2 / 2) * resolution))) / (2*tileY2 * resolution), 0);
 
-
-                                    int column = (int)(((cx - bottomLeftX)) / (256 * resolution));
-                                    int row = (int)(((cy - bottomLeftY)) / (256 * resolution));
+                                    int column = (int)(((cx - bottomLeftX)) / (2*tileX2 * resolution));
+                                    int row = (int)(((cy - bottomLeftY)) / (2*tileY2 * resolution));
                                     string geoCenterString = row + "/" + column;
                                     string url = "http://karta.hitta.se/mapstore/service/tile/";
                                     if (m_View == "Sat")
@@ -342,9 +315,19 @@ namespace Lofas.SportsTracks.Hitta_SE_MapProvider
                             obj.cx = cx;
                             obj.cy = cy;
                             obj.Scale = useZoomLevel;
+#if ST_2_1
                             listener.NotifyMapImageReady(obj);
+#else
+                            double latN, latS, longW, longE;
+
+                            //TODO: Get bounds for tile
+                            CFProjection.RT90ToWGS84(cx + iRx, cy - iRy, out latN, out longW);
+                            CFProjection.RT90ToWGS84(cx-iRx, cy+iRy, out latS, out longE);
+                            listener.InvalidateRegion(new GPSBounds(new GPSLocation((float)latN, (float)longW), 
+                                new GPSLocation((float)latS, (float)longE)));
+#endif
                         }
-                        catch (Exception ee)
+                        catch (Exception)
                         {
                         }
                         finally
@@ -367,7 +350,7 @@ namespace Lofas.SportsTracks.Hitta_SE_MapProvider
             {
                 return Image.FromFile(str);
             }
-            catch (Exception ee)
+            catch (Exception)
             {
                 try
                 {
@@ -377,7 +360,7 @@ namespace Lofas.SportsTracks.Hitta_SE_MapProvider
                 {
                 }
 
-                return new Bitmap(256, 256);
+                return new Bitmap(2*tileX2, 2*tileY2);
             }
         }
 
@@ -388,66 +371,48 @@ namespace Lofas.SportsTracks.Hitta_SE_MapProvider
             return File.Exists(str);
         }
 
-        public bool FractionalZoom
+        public Guid Id
+        {
+            get { return m_GUID; }
+        }
+
+        public IMapProjection MapProjection
+        {
+            get { return m_Proj; }
+        }
+
+        public double MaximumZoom
+        {
+            get { return 9; }
+        }
+
+        public double MinimumZoom
+        {
+            get { return 0.35; }
+        }
+
+        public bool SupportsFractionalZoom
         {
             get { return true; }
         }
 
-        public Guid Id
+        public string Name
         {
-            get { return m_View == "Sat" ? this.GetType().GUID : new Guid("9BD470DD-3078-456f-8175-1A714D286B90"); }
+            get { return m_Name; }
         }
 
+        public void Refresh(System.Drawing.Rectangle drawRectangle, ZoneFiveSoftware.Common.Data.GPS.IGPSLocation center, double zoomLevel)
+        {
+        }
+
+    #endregion
+
+#if ST_2_1
+        //A few methods differ ST2/ST3, the ST2 are separated
         public System.Drawing.Rectangle MapImagePixelRect(object mapImage, System.Drawing.Rectangle drawRectangle, ZoneFiveSoftware.Common.Data.GPS.IGPSLocation center, double zoomLevel)
         {
             if (mapImage is MapImageObj)
             {
-                //MapImageObj obj = mapImage as MapImageObj;
-
-                //double cX = obj.cx;
-                //double cY = obj.cy;
-
-                //double x, y;
-                //Triona.Util.CFProjection.WGS84ToRT90(center.LatitudeDegrees, center.LongitudeDegrees, 0, out x, out y);
-
-                //double hittaScale;
-                //double tileMeterPerPixel;
-
-                //int bottomLeftX = 451424;
-                //int bottomLeftY = 5651424;
-                //double resolution = ZOOM_LEVELS[Array.IndexOf(scaleValues, obj.Scale)];
-                //int column = (int)Math.Round(((cX - bottomLeftX)) / (256 * resolution), 0);
-                //int row = (int)Math.Round(((cY - bottomLeftY)) / (256 * resolution), 0);
-                //double colX = column * 256 * resolution + bottomLeftX;
-                //double rowY = row * 256 * resolution + bottomLeftY;
-
-                //double metersPerPixel = getMetersPerPixel(zoomLevel, out tileMeterPerPixel, out hittaScale);
-
-                //double tileWidth = tileMeterPerPixel * 256;
-
-                //double drawTileWith = tileWidth / metersPerPixel;
-
-                //double dx = ((cX - 256*metersPerPixel - x)/metersPerPixel);
-                //double dy = ((cY-256 - y) / metersPerPixel);
-
-
-                //int centerPxX = drawRectangle.Width / 2;
-                //int centerPxY = drawRectangle.Height / 2;
-                //double minX = (centerPxX + dx);
-                //double maxY = (centerPxY - dy );
-
-                //Rectangle rect = Rectangle.FromLTRB(
-                //    (int)(minX-1), 
-                //    (int)Math.Floor((float)maxY)-1, 
-                //    (int)Math.Ceiling(minX + drawTileWith)+1, 
-                //    (int)Math.Ceiling(maxY + drawTileWith)+1);
-
-                //rect = Rectangle.FromLTRB(
-                //    (int)(minX - 1),
-                //    0,
-                //    (int)Math.Ceiling(minX + drawTileWith) + 1,
-                //    drawRectangle.Height);
-
                 return drawRectangle;
             }
             else
@@ -458,60 +423,31 @@ namespace Lofas.SportsTracks.Hitta_SE_MapProvider
 
         public double MaxZoomLevel
         {
-            get { return 9; }
+            get { return MaximumZoom; }
         }
 
         public double MinZoomLevel
         {
-            get { return 0.35; }
+            get { return MinimumZoom; }
         }
-
-        public string Name
+        public bool FractionalZoom
         {
-            get { return m_View == "Sat" ? "Hitta.se Flygfoto" : "Hitta.se Karta"; }
+            get { return SupportsFractionalZoom; }
         }
 
-        public void Refresh(System.Drawing.Rectangle drawRectangle, ZoneFiveSoftware.Common.Data.GPS.IGPSLocation center, double zoomLevel)
-        {
-        }
+#endif
 
-        #endregion
-
+#if ST_2_1
         #region IMapProjection Members
-
         public System.Drawing.Point GPSToPixel(ZoneFiveSoftware.Common.Data.GPS.IGPSLocation origin, double zoomLevel, ZoneFiveSoftware.Common.Data.GPS.IGPSLocation gps)
         {
-            double hittascale;
-            double tileMeterPerPixel;
-            double metersPerPixel = getMetersPerPixel(zoomLevel,out tileMeterPerPixel, out hittascale);
-            double x, y, origx, origy;
-            CFProjection.WGS84ToRT90(gps.LatitudeDegrees, gps.LongitudeDegrees, 0, out x, out y);
-            CFProjection.WGS84ToRT90(origin.LatitudeDegrees, origin.LongitudeDegrees, 0, out origx, out origy);
-
-            int dx = (int)Math.Round((x - origx) / metersPerPixel);
-            int dy = (int)Math.Round((origy - y) / metersPerPixel);
-
-            return new System.Drawing.Point(dx, dy);
+            return m_Proj.GPSToPixel(origin, zoomLevel, gps);
         }
-
         public ZoneFiveSoftware.Common.Data.GPS.IGPSLocation PixelToGPS(ZoneFiveSoftware.Common.Data.GPS.IGPSLocation origin, double zoomLevel, System.Drawing.Point pixel)
         {
-            double hittascale;
-            double tileMeterPerPixel;
-            double metersPerPixel = getMetersPerPixel(zoomLevel, out tileMeterPerPixel, out hittascale);
-
-            double lat, lon, origx, origy;
-            CFProjection.WGS84ToRT90(origin.LatitudeDegrees, origin.LongitudeDegrees, 0, out origx, out origy);
-
-            double x = origx + pixel.X*metersPerPixel;
-            double y = origy - pixel.Y*metersPerPixel;
-
-
-            CFProjection.RT90ToWGS84(x, y, out lat, out lon);
-            return new ZoneFiveSoftware.Common.Data.GPS.GPSLocation((float)lon, (float)lat);
+            return m_Proj.PixelToGPS(origin, zoomLevel, pixel);
         }
-
         #endregion
+#endif
     }
 }
-#endif
