@@ -24,7 +24,6 @@ using System.Xml;
 
 namespace Lofas.SportsTracks.Hitta_SE_MapProvider
 {
-    [Guid("BA45D36B-CC00-4dcf-8768-E24237ADCA4B")]
     public class Plugin : IPlugin
     {
 
@@ -37,7 +36,7 @@ namespace Lofas.SportsTracks.Hitta_SE_MapProvider
 
         public Guid Id
         {
-            get { return new Guid("BA45D36B-CC00-4dcf-8768-E24237ADCA4B"); }
+            get { return Lofas.SportsTracks.GUIDs.PluginMain; }
         }
 
         public string Name
