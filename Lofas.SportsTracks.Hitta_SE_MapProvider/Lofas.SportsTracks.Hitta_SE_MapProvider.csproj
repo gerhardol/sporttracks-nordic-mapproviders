@@ -16,12 +16,12 @@
     <Reference Include="Microsoft.Vsa" />
   </ItemGroup>
   <ItemGroup>
-    <Compile Include="Lofas.Projection.CFProjection.cs" />
-    <None Include="HittaLayer.cs" />
-    <Compile Include="Eniro_SE_MapProvider.cs" />
-    <Content Include="EvalJScript.cs" />
-    <Compile Include="Hitta_SE_ExtensionProviders.cs" />
-    <Compile Include="Hitta_SE_MapProvider.cs" />
+    <Compile Include="MapProviders\Lofas.Projection.CFProjection.cs" />
+    <None Include="MapProviders\HittaLayer.cs" />
+    <Compile Include="MapProviders\Eniro_SE_MapProvider.cs" />
+    <Content Include="MapProviders\EvalJScript.cs" />
+    <Compile Include="MapProviders\Hitta_SE_ExtensionProviders.cs" />
+    <Compile Include="MapProviders\Hitta_SE_MapProvider.cs" />
     <Compile Include="Plugin.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="Properties\Resources.Designer.cs">
