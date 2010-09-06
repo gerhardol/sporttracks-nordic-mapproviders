@@ -16,6 +16,8 @@
     <Reference Include="Microsoft.Vsa" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="MapProviders\Eniro_SE_MapProjection.cs" />
+    <Compile Include="MapProviders\Hitta_SE_MapProjection.cs" />
     <Compile Include="MapProviders\Lofas.Projection.CFProjection.cs" />
     <Compile Include="MapProviders\Eniro_SE_MapProvider.cs" />
     <Content Include="MapProviders\EvalJScript.cs" />
