@@ -68,7 +68,6 @@ namespace Lofas.SportsTracks.Hitta_SE_MapProvider
         {
             m_View = view;
             m_ViewCountry = country;
-            m_Proj = new Eniro_SE_MapProjection(this);
 
             if (country.StartsWith("FI"))
             {
@@ -80,7 +79,9 @@ namespace Lofas.SportsTracks.Hitta_SE_MapProvider
 #if ST_2_1
                 Plugin.m_Application.SystemPreferences.WebFilesFolder, "MapTiles" + 
 #else
-                Plugin.m_Application.Configuration.CommonWebFilesFolder, GUIDs.PluginMain.ToString() + 
+                //TODO: Temporary use the ST2 folder, until Eniro works again
+                //Plugin.m_Application.Configuration.CommonWebFilesFolder, GUIDs.PluginMain.ToString() +
+                Plugin.m_Application.Configuration.CommonWebFilesFolder, "../../2.0/Web Files/MapTiles" +
 #endif
                 Path.DirectorySeparatorChar + "Eniro_" + m_ViewCountry.Substring(0, 2) + "_" + view);
             m_DownloadQueueItems = new Dictionary<string, string>();
@@ -128,6 +129,22 @@ namespace Lofas.SportsTracks.Hitta_SE_MapProvider
                     m_GUID = new Guid("FE0739E6-643D-4a0a-95B3-74CC1073D36E");
                 }
             }
+            string ident = "standard";
+            switch (m_View)
+            {
+                case "Sat":
+                    ident = "aerial";
+                    break;
+                case "Nat":
+                    ident = "nautical";
+                    break;
+            }
+
+            string reqUrlBase = infoUrl +
+                "?callCount=1&page=%2F&httpSessionId=&scriptSessionId=A5D21E9D83F2E4EA745B637926180464446&c0-scriptName=TilesService&c0-methodName=initializeEniMap&c0-id=0&c0-param0=string%3ASE&c0-param1=string%3A&c0-param2=string%3A" +
+                ident + "&c0-e1=number%3A";
+            m_Proj = new Eniro_SE_MapProjection(m_CacheDirectory, reqUrlBase);
+
         }
  
         public void ClearDownloadQueue()
@@ -140,8 +157,6 @@ namespace Lofas.SportsTracks.Hitta_SE_MapProvider
             get { return m_DownloadQueueItems.Count; }
         }
 
-
-        int m_DownloadQueue = 0;
         public int DrawMap(IMapImageReadyListener listener, System.Drawing.Graphics graphics, System.Drawing.Rectangle drawRectangle, System.Drawing.Rectangle clipRectangle, ZoneFiveSoftware.Common.Data.GPS.IGPSLocation center, double zoomLevel)
         {
             //return 0;
@@ -224,12 +239,14 @@ namespace Lofas.SportsTracks.Hitta_SE_MapProvider
         }
                         
 
+#if ENIRO_TODO_DOWNLOAD
         private class MapImageObj
         {
             public double cx;
             public double cy;
             public double Scale;
         }
+#endif
         WebClient wc = new WebClient();
         Random rnd = new Random();
         private void queueDownload(double cx, double cy, int iRx, int iRy, double useZoomLevel, IMapImageReadyListener listener)
@@ -237,10 +254,10 @@ namespace Lofas.SportsTracks.Hitta_SE_MapProvider
             string item = iRx + "_" + iRy + "_" + useZoomLevel.ToString();
             if (!m_DownloadQueueItems.ContainsKey(item))
             {
+#if ENIRO_TODO_DOWNLOAD
                 m_DownloadQueueItems.Add(item,"");
                 ThreadPool.QueueUserWorkItem(new WaitCallback(delegate(object o)
                     {
-                        
                         try
                         {
                             lock (wc)
@@ -281,7 +298,7 @@ namespace Lofas.SportsTracks.Hitta_SE_MapProvider
 #if ST_2_1
                             listener.NotifyMapImageReady(obj);
 #else
-                            //TODO: Get bounds for tile
+                            //TODO: Get bounds for tile, center is set
                             //listener.InvalidateRegion(new GPSBounds(
 #endif
                         }
@@ -291,10 +308,10 @@ namespace Lofas.SportsTracks.Hitta_SE_MapProvider
                         finally
                         {
                         }
-                        m_DownloadQueue--;
                         m_DownloadQueueItems.Remove(item);
 
                     }));
+#endif
             }
         }
 
@@ -332,6 +349,9 @@ namespace Lofas.SportsTracks.Hitta_SE_MapProvider
 
         public void Refresh(System.Drawing.Rectangle drawRectangle, ZoneFiveSoftware.Common.Data.GPS.IGPSLocation center, double zoomLevel)
         {
+#if ENIRO_TODO_DOWNLOAD
+            //TODO: Delete cached tiles
+#endif
         }
 
         public Guid Id
@@ -363,6 +383,8 @@ namespace Lofas.SportsTracks.Hitta_SE_MapProvider
         {
             get { return m_Name; }
         }
+        #endregion
+
 #if ST_2_1
         //A few methods differ ST2/ST3, the ST2 are separated
         public System.Drawing.Rectangle MapImagePixelRect(object mapImage, System.Drawing.Rectangle drawRectangle, ZoneFiveSoftware.Common.Data.GPS.IGPSLocation center, double zoomLevel)
@@ -418,10 +440,6 @@ namespace Lofas.SportsTracks.Hitta_SE_MapProvider
             get { return SupportsFractionalZoom; }
         }
 
-#endif
-        #endregion
-
-#if ST_2_1
         #region IMapProjection Members
         public System.Drawing.Point GPSToPixel(ZoneFiveSoftware.Common.Data.GPS.IGPSLocation origin, double zoomLevel, ZoneFiveSoftware.Common.Data.GPS.IGPSLocation gps)
         {

@@ -36,13 +36,17 @@ namespace Lofas.SportsTracks.Hitta_SE_MapProvider
 {
     public class Hitta_SE_MapProjection : IMapProjection
     {
-        public double[] scaleValues = { 756, 1890, 7559, 15118, 37795, 94488, 264567, 755906, 2645669, 13228346 };
-        public double[] ZOOM_LEVELS = { 0.2, 0.5, 2, 4, 10, 25, 70, 200, 700, 3500 };
+        private readonly double[] scaleValues = { 756, 1890, 7559, 15118, 37795, 94488, 264567, 755906, 2645669, 13228346 };
+        private readonly double[] ZOOM_LEVELS = { 0.2, 0.5, 2, 4, 10, 25, 70, 200, 700, 3500 };
 
+        public double getResolution(double useZoomLevel)
+        {
+            return ZOOM_LEVELS[Array.IndexOf(scaleValues, useZoomLevel)];
+        }
         public double getMetersPerPixel(double zoomLevel, out double tileMeterPerPixel, out double hittascale)
         {
-            double useZoomLevel = ZOOM_LEVELS[ZOOM_LEVELS.Length - 1];
-            double useScale = scaleValues[scaleValues.Length - 1];
+            //double useZoomLevel = ZOOM_LEVELS[ZOOM_LEVELS.Length - 1];
+            //double useScale = scaleValues[scaleValues.Length - 1];
             //double minDist = Double.MaxValue;
             /*for (int i = ZOOM_LEVELS.Length - 1; i >= 0; i--)
             {
@@ -55,12 +59,14 @@ namespace Lofas.SportsTracks.Hitta_SE_MapProvider
             }*/
 
             int zoomLevelInt = (int)Math.Floor(zoomLevel);
+            if (zoomLevelInt < 0) { zoomLevelInt = 0; }
+            if (zoomLevelInt >= ZOOM_LEVELS.Length) { zoomLevelInt = ZOOM_LEVELS.Length-1; }
             int level1 = zoomLevelInt;
             int level2 = zoomLevelInt + 1;
             double zoomLevelRest = zoomLevel - zoomLevelInt;
-            useZoomLevel = ZOOM_LEVELS[zoomLevelInt];
+            double useZoomLevel = ZOOM_LEVELS[zoomLevelInt];
             tileMeterPerPixel = useZoomLevel;
-            useScale = scaleValues[zoomLevelInt];
+            double useScale = scaleValues[zoomLevelInt];
             if (zoomLevelRest > 0.5)
             {
                 tileMeterPerPixel = ZOOM_LEVELS[zoomLevelInt + 1];
@@ -71,7 +77,6 @@ namespace Lofas.SportsTracks.Hitta_SE_MapProvider
                 useZoomLevel += (zoomLevelRest * (ZOOM_LEVELS[level2] - ZOOM_LEVELS[level1]));
 
             hittascale = useScale;
-
 
             return useZoomLevel;
         }
