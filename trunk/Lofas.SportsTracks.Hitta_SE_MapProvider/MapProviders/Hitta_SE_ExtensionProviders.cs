@@ -52,20 +52,23 @@ namespace Lofas.SportsTracks.Hitta_SE_MapProvider
 
     public class Hitta_SE_ExtensionProviders : IExtendMapTileProviders
     {
-        static IList<IMapTileProvider> m_List = new List<IMapTileProvider>();
-        static Hitta_SE_ExtensionProviders()
+        private IList<IMapTileProvider> m_List = null;
+        public IList<IMapTileProvider> MapTileProviders
         {
-            m_List.Add(new Hitta_SE_MapProvider("Sat"));
-            m_List.Add(new Hitta_SE_MapProvider("Map"));
-            //Eniro not working now
-            //m_List.Add(new Eniro_SE_MapProvider("Sat"));
-            //m_List.Add(new Eniro_SE_MapProvider("Map"));
-            //m_List.Add(new Eniro_SE_MapProvider("Nat"));
-            //m_List.Add(new Eniro_SE_MapProvider("Map","FI_fi"));
-        }
-        public IList<ZoneFiveSoftware.Common.Visuals.Mapping.IMapTileProvider> MapTileProviders
-        {
-            get { return m_List; }
+            get {
+                if (null == m_List)
+                {
+                    m_List = new List<IMapTileProvider>();
+                    m_List.Add(new Hitta_SE_MapProvider("Sat"));
+                    m_List.Add(new Hitta_SE_MapProvider("Map"));
+                    //Eniro not working now
+                    //m_List.Add(new Eniro_SE_MapProvider("Sat"));
+                    //m_List.Add(new Eniro_SE_MapProvider("Map"));
+                    m_List.Add(new Eniro_SE_MapProvider("Nat"));
+                    //m_List.Add(new Eniro_SE_MapProvider("Map","FI_fi"));
+                }
+                return m_List; 
+            }
         }
 
     }

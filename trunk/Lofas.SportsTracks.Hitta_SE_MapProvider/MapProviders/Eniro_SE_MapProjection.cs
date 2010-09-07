@@ -41,13 +41,17 @@ namespace Lofas.SportsTracks.Hitta_SE_MapProvider
         const int tileX2 = 128;
         const int tileY2 = 128;
         //double[] ZOOM_LEVELS = { 0.2, 0.8, 2, 4, 10, 25, 70, 200, 700, 3500 };
-        public double[] scaleValues = { 1000, 2000, 4000, 8200, 16000, 57000, 240000, 1000000, 4000000, 1.6384E7 };
-        public double[] old_scaleValues = { 1000, 2000, 4000, 8200, 20000, 57000, 240000, 500000, 4000000, 20800000 };
-        private readonly Eniro_SE_MapProvider m_Prov;
-        public Eniro_SE_MapProjection(Eniro_SE_MapProvider MapProv)
+        private readonly double[] scaleValues = { 1000, 2000, 4000, 8200, 16000, 57000, 240000, 1000000, 4000000, 1.6384E7 };
+        //public readonly double[] old_scaleValues = { 1000, 2000, 4000, 8200, 20000, 57000, 240000, 500000, 4000000, 20800000 };
+        private readonly string m_CacheDirectory;
+        private readonly string m_reqUrlBase;
+
+        public Eniro_SE_MapProjection(string m_CacheDirectory, string m_reqUrlBase)
         {
-            m_Prov = MapProv;
+            this.m_CacheDirectory = m_CacheDirectory;
+            this.m_reqUrlBase = m_reqUrlBase;
         }
+
         #region IMapProjection Members
         private class CacheTileInfo
         {
@@ -100,7 +104,7 @@ namespace Lofas.SportsTracks.Hitta_SE_MapProvider
         {
 
             //double useZoomLevel = ZOOM_LEVELS[ZOOM_LEVELS.Length - 1];
-            double useScale = scaleValues[scaleValues.Length - 1];
+            //double useScale = scaleValues[scaleValues.Length - 1];
             //double minDist = Double.MaxValue;
             /*for (int i = ZOOM_LEVELS.Length - 1; i >= 0; i--)
             {
@@ -113,11 +117,13 @@ namespace Lofas.SportsTracks.Hitta_SE_MapProvider
             }*/
 
             int zoomLevelInt = (int)Math.Floor(zoomLevel);
+            if (zoomLevelInt < 0) { zoomLevelInt = 0; }
+            if (zoomLevelInt >= scaleValues.Length) { zoomLevelInt = scaleValues.Length - 1; }
             int level1 = zoomLevelInt;
             int level2 = zoomLevelInt + 1;
             double zoomLevelRest = zoomLevel - zoomLevelInt;
             //useZoomLevel = ZOOM_LEVELS[zoomLevelInt];
-            useScale = scaleValues[zoomLevelInt];
+            double useScale = scaleValues[zoomLevelInt];
             double useZoomLevel = useScale * 0.0254 / tileX2; // 0.000265 == meter/dpi
             tileMeterPerPixel = useZoomLevel;
 
@@ -128,14 +134,10 @@ namespace Lofas.SportsTracks.Hitta_SE_MapProvider
                 tileMeterPerPixel = useScale * 0.000265;
             }
 
-
             if (level2 < scaleValues.Length - 1 && zoomLevelRest > 1e-6)
                 useZoomLevel += (zoomLevelRest * (scaleValues[level2] * 0.0254 / tileX2 - scaleValues[level1] * 0.0254 / tileX2));
 
-
-
             eniroscale = useScale;
-
 
             return useZoomLevel;
         }
@@ -174,6 +176,7 @@ namespace Lofas.SportsTracks.Hitta_SE_MapProvider
             return new System.Drawing.Point(dx, dy);
         }
 
+        //TODO: This method contains a little info about providers
         public void getScaleInfo(double zoomLevel, ZoneFiveSoftware.Common.Data.GPS.IGPSLocation gps, out double refTileULX, out double refTileULY, out double tileWMetersPerPixel, out double tileHMetersPerPixel, out int refTileXOffset,out int refTileYOffset, out double lengthDegreesX, out double lengthDegreesY, out double centerLat, out double centerLon)
         {
             
@@ -196,7 +199,7 @@ namespace Lofas.SportsTracks.Hitta_SE_MapProvider
             }
                 else
             {
-                string infoFile = Path.Combine(m_Prov.m_CacheDirectory, useScale + "\\tileInfo.txt");
+                string infoFile = Path.Combine(m_CacheDirectory, useScale + "\\tileInfo.txt");
                 if (!File.Exists(infoFile))
                 {
                     double lat = gps.LongitudeDegrees;
@@ -205,18 +208,13 @@ namespace Lofas.SportsTracks.Hitta_SE_MapProvider
                     //               "http://kartor.eniro.se/mapapi/servlets/dwr-invoker/exec/TilesService.getInfo.dwr"
                     //                http://kartor.eniro.se/mapapi/servlets/dwr-invoker/call/plaincall/TilesService.initializeEniMap.dwr?callCount=1&page=%2F&httpSessionId=&scriptSessionId=A5D21E9D83F2E4EA745B637926180464446&c0-scriptName=TilesService&c0-methodName=initializeEniMap&c0-id=0&c0-param0=string%3ASE&c0-param1=string%3A&c0-param2=string%3Astandard&c0-e1=number%3A0&c0-e2=number%3A0&c0-e3=string%3Awgs84&c0-param3=Object_Wgs84GeoCoord%3A%7Bx%3Areference%3Ac0-e1%2C%20y%3Areference%3Ac0-e2%2C%20crs%3Areference%3Ac0-e3%7D&c0-param4=number%3A1&c0-param5=string%3A&c0-param6=null%3Anull&c0-param7=number%3A0&c0-param8=number%3A0&batchId=1
 
-                    string ident = "standard";
-                    switch (m_Prov.m_View)
-                    {
-                        case "Sat":
-                            ident = "aerial";
-                            break;
-                        case "Nat":
-                            ident = "nautical";
-                            break;
-                    }
 
-                    string reqUrl = m_Prov.infoUrl + "?callCount=1&page=%2F&httpSessionId=&scriptSessionId=A5D21E9D83F2E4EA745B637926180464446&c0-scriptName=TilesService&c0-methodName=initializeEniMap&c0-id=0&c0-param0=string%3ASE&c0-param1=string%3A&c0-param2=string%3A" + ident + "&c0-e1=number%3A" + lat.ToString(CultureInfo.InvariantCulture) + "&c0-e2=number%3A" + lon.ToString(CultureInfo.InvariantCulture) + "&c0-e3=string%3Awgs84&c0-param3=Object_Wgs84GeoCoord%3A%7Bx%3Areference%3Ac0-e1%2C%20y%3Areference%3Ac0-e2%2C%20crs%3Areference%3Ac0-e3%7D&c0-param4=number%3A" + (scaleValues.Length - Array.IndexOf(scaleValues, useScale)) + "&c0-param5=string%3A&c0-param6=null%3Anull&c0-param7=number%3A0&c0-param8=number%3A0&batchId=0";
+                    string reqUrl = m_reqUrlBase + 
+                        lat.ToString(CultureInfo.InvariantCulture) + "&c0-e2=number%3A" + 
+                        lon.ToString(CultureInfo.InvariantCulture) + 
+                        "&c0-e3=string%3Awgs84&c0-param3=Object_Wgs84GeoCoord%3A%7Bx%3Areference%3Ac0-e1%2C%20y%3Areference%3Ac0-e2%2C%20crs%3Areference%3Ac0-e3%7D&c0-param4=number%3A" + 
+                        (scaleValues.Length - Array.IndexOf(scaleValues, useScale)) + 
+                        "&c0-param5=string%3A&c0-param6=null%3Anull&c0-param7=number%3A0&c0-param8=number%3A0&batchId=0";
                     WebRequest wq = HttpWebRequest.Create(reqUrl);
                     //wq.Method = "POST";
                     //string iurl = "callCount=1&c0-scriptName=TilesService&c0-methodName=getInfo&c0-id=5840_1217142424863&c0-param0=string:SE&c0-param1=string:sv&c0-param2=string:" + 
@@ -384,9 +382,9 @@ myObj = s3;
                     double wMeterPerPixel = (tileLRX_M - tileUlX_M) / (2*tileX2);
                     double hMeterPerPixel = (tileUlY_M - tileLRY_M) / (2 * tileY2);
                     //object test = Result["zoomLevel"];
-                    if (!Directory.Exists(Path.Combine(m_Prov.m_CacheDirectory, useScale.ToString())))
+                    if (!Directory.Exists(Path.Combine(m_CacheDirectory, useScale.ToString())))
                     {
-                        Directory.CreateDirectory(Path.Combine(m_Prov.m_CacheDirectory, useScale.ToString()));
+                        Directory.CreateDirectory(Path.Combine(m_CacheDirectory, useScale.ToString()));
                     }
                     File.WriteAllLines(infoFile, new string[] {tileUlX_M.ToString(CultureInfo.InvariantCulture), 
                         tileUlY_M.ToString(CultureInfo.InvariantCulture),
