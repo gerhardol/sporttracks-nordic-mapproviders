@@ -239,14 +239,14 @@ namespace Lofas.SportsTracks.Hitta_SE_MapProvider
         }
                         
 
-#if ENIRO_TODO_DOWNLOAD
+//#if ENIRO_TODO_DOWNLOAD
         private class MapImageObj
         {
             public double cx;
             public double cy;
             public double Scale;
         }
-#endif
+//#endif
         WebClient wc = new WebClient();
         Random rnd = new Random();
         private void queueDownload(double cx, double cy, int iRx, int iRy, double useZoomLevel, IMapImageReadyListener listener)

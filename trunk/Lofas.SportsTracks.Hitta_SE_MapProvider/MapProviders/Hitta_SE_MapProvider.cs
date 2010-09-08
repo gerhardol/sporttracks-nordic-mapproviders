@@ -45,7 +45,7 @@ namespace Lofas.SportsTracks.Hitta_SE_MapProvider
     #region IMapProvider Members
 
         const int tileX2 = 128;
-        const int tileY2 = 128;
+        const int tileY2 = tileX2;
         private readonly string m_CacheDirectory;
         private readonly Dictionary<string, string> m_DownloadQueueItems;
 
@@ -121,7 +121,7 @@ namespace Lofas.SportsTracks.Hitta_SE_MapProvider
             double tileDrawWidth = (tileWidth / metersPerPixel);
 
 
-            double rx = ulX;
+            //double rx = ulX;
 
             double startTileX = Math.Round(((int)(ulX / (tileMeterPerPixel * 2*tileX2)) + 0) * tileMeterPerPixel * 2*tileX2 - 0.5, 1);
             double startTileY = Math.Round(((int)(ulY / (tileMeterPerPixel * 2*tileY2)) + 1) * tileMeterPerPixel * 2*tileY2 - 0.5, 1);
@@ -204,10 +204,9 @@ namespace Lofas.SportsTracks.Hitta_SE_MapProvider
             double drawTileDX = (startTileX - ulX) / metersPerPixel;
             double drawTileDY = (ulY - startTileY) / metersPerPixel;
             startTileY = rowY + tileDrawWidth;
-
 #endif
             
-            rx = startTileX;
+            double rx = startTileX;
 
             int col = 0;
             int numQueued = 0;
@@ -237,7 +236,6 @@ namespace Lofas.SportsTracks.Hitta_SE_MapProvider
                     {
                         queueDownload(rx, ry, iRx, iRy, useScale, listener);
                         numQueued++;
-                        //m_DownloadQueue++;
                     }
                     ry -= 2*tileY2 * tileMeterPerPixel;
                     row++;
@@ -319,8 +317,8 @@ namespace Lofas.SportsTracks.Hitta_SE_MapProvider
                             double latN, latS, longW, longE;
 
                             //TODO: Are the bounds correct?
-                            CFProjection.RT90ToWGS84(cx + iRx, cy - iRy, out latN, out longW);
-                            CFProjection.RT90ToWGS84(cx-iRx, cy+iRy, out latS, out longE);
+                            CFProjection.RT90ToWGS84(cx, cy, out latN, out longW);
+                            CFProjection.RT90ToWGS84(iRx/10, iRy/10, out latS, out longE);
                             listener.InvalidateRegion(new GPSBounds(new GPSLocation((float)latN, (float)longW), 
                                 new GPSLocation((float)latS, (float)longE)));
 #endif

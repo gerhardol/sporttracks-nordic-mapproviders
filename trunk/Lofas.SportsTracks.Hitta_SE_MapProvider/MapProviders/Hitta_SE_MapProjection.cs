@@ -43,6 +43,7 @@ namespace Lofas.SportsTracks.Hitta_SE_MapProvider
         {
             return ZOOM_LEVELS[Array.IndexOf(scaleValues, useZoomLevel)];
         }
+
         public double getMetersPerPixel(double zoomLevel, out double tileMeterPerPixel, out double hittascale)
         {
             //double useZoomLevel = ZOOM_LEVELS[ZOOM_LEVELS.Length - 1];
@@ -61,25 +62,27 @@ namespace Lofas.SportsTracks.Hitta_SE_MapProvider
             int zoomLevelInt = (int)Math.Floor(zoomLevel);
             if (zoomLevelInt < 0) { zoomLevelInt = 0; }
             if (zoomLevelInt >= ZOOM_LEVELS.Length) { zoomLevelInt = ZOOM_LEVELS.Length-1; }
-            int level1 = zoomLevelInt;
-            int level2 = zoomLevelInt + 1;
+
             double zoomLevelRest = zoomLevel - zoomLevelInt;
             double useZoomLevel = ZOOM_LEVELS[zoomLevelInt];
-            tileMeterPerPixel = useZoomLevel;
             double useScale = scaleValues[zoomLevelInt];
-            if (zoomLevelRest > 0.5)
+            tileMeterPerPixel = useZoomLevel;
+            if (zoomLevelRest > 0.5 && zoomLevelInt < ZOOM_LEVELS.Length - 1)
             {
                 tileMeterPerPixel = ZOOM_LEVELS[zoomLevelInt + 1];
                 useScale = scaleValues[zoomLevelInt + 1];
             }
 
-            if (level2 < ZOOM_LEVELS.Length && zoomLevelRest > 1e-6)
+            int level1 = zoomLevelInt;
+            int level2 = zoomLevelInt + 1;
+            if (level2 < ZOOM_LEVELS.Length - 1 && zoomLevelRest > 1e-6)
                 useZoomLevel += (zoomLevelRest * (ZOOM_LEVELS[level2] - ZOOM_LEVELS[level1]));
 
             hittascale = useScale;
 
             return useZoomLevel;
         }
+
         public System.Drawing.Point GPSToPixel(ZoneFiveSoftware.Common.Data.GPS.IGPSLocation origin, double zoomLevel, ZoneFiveSoftware.Common.Data.GPS.IGPSLocation gps)
         {
             double hittascale;
