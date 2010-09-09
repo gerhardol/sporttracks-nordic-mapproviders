@@ -144,7 +144,6 @@ namespace Lofas.SportsTracks.Hitta_SE_MapProvider
                 "?callCount=1&page=%2F&httpSessionId=&scriptSessionId=A5D21E9D83F2E4EA745B637926180464446&c0-scriptName=TilesService&c0-methodName=initializeEniMap&c0-id=0&c0-param0=string%3ASE&c0-param1=string%3A&c0-param2=string%3A" +
                 ident + "&c0-e1=number%3A";
             m_Proj = new Eniro_SE_MapProjection(m_CacheDirectory, reqUrlBase);
-
         }
  
         public void ClearDownloadQueue()
@@ -159,13 +158,6 @@ namespace Lofas.SportsTracks.Hitta_SE_MapProvider
 
         public int DrawMap(IMapImageReadyListener listener, System.Drawing.Graphics graphics, System.Drawing.Rectangle drawRectangle, System.Drawing.Rectangle clipRectangle, ZoneFiveSoftware.Common.Data.GPS.IGPSLocation center, double zoomLevel)
         {
-            //return 0;
-            /*double x, y, origx, origy;
-            GeoToUTM(center.LatitudeDegrees, center.LongitudeDegrees, out x, out y);
-
-            int numQueued = DrawTiles(listener, graphics, ref drawRectangle, zoomLevel, x, y,center);
-
-            */
             int numQueued = 0;
             try
             {
@@ -189,8 +181,8 @@ namespace Lofas.SportsTracks.Hitta_SE_MapProvider
                 int tileDrawDX = (int)(-1 * (dx - numTilesDX) * 2*tileX2) - tileY2;
                 int tileDrawDY = (int)(1 * (dy - numTilesDY) * 2*tileY2) - tileY2;
 
-                int numTilesX = (int)Math.Ceiling((float)drawRectangle.Width / (2*tileX2));
-                int numTilesY = (int)Math.Ceiling((float)drawRectangle.Height / (2*tileY2));
+                int numTilesX = (int)Math.Ceiling(drawRectangle.Width / (float)(2 * tileX2));
+                int numTilesY = (int)Math.Ceiling(drawRectangle.Height / (float)(2 * tileY2));
 
                 Image img = null;
 
@@ -204,7 +196,8 @@ namespace Lofas.SportsTracks.Hitta_SE_MapProvider
                         if (isCached(tileX, tileY, useScale))
                         {
                             img = getImageFromCache(tileX, tileY, useScale);
-                            graphics.DrawImage(img, (int)Math.Floor((double)(drawRectangle.Width / 2.0 + tileDrawDX + col * 2*tileX2)), (int)Math.Floor((double)(drawRectangle.Height / 2.0 + tileDrawDY + row * 2*tileY2)));
+                            graphics.DrawImage(img, (int)Math.Floor((double)(drawRectangle.Width / 2.0 + tileDrawDX + col * 2*tileX2)),
+                                (int)Math.Floor((double)(drawRectangle.Height / 2.0 + tileDrawDY + row * 2*tileY2)));
                             //graphics.DrawRectangle(Pens.Red, (int)Math.Floor(drawRectangle.X + ddx + col * tileDrawWidth), (int)Math.Floor(drawRectangle.Y + ddy + row * tileDrawHeight), (int)tileDrawWidth, (int)tileDrawHeight);
                             img.Dispose();
                         }
@@ -220,10 +213,12 @@ namespace Lofas.SportsTracks.Hitta_SE_MapProvider
                             //img.Save(Path.Combine(downloadDir, tileX + "_" + tileY + "." + m_ImageExt));
                             int cX = (int)Math.Floor((double)(tileDrawDX + col * 2*tileX2)) + tileY2;
                             int cY = (int)Math.Floor((double)(tileDrawDY + row * 2*tileY2)) + tileY2;
-                            double latC = center.LongitudeDegrees + cX / (2*tileX2) * lengthDegreesX;
-                            double lonC = center.LatitudeDegrees + cY / (2*tileY2) * lengthDegreesY;
+                            double latC = center.LongitudeDegrees + cX / (float)(2 * tileX2) * lengthDegreesX;
+                            double lonC = center.LatitudeDegrees + cY / (float)(2 * tileY2) * lengthDegreesY;
+#if ENIRO_TODO_DOWNLOAD
                             queueDownload(latC, lonC, tileX, tileY, useScale, listener);
                             numQueued++;
+#endif
                         }
 
                     }
@@ -239,14 +234,13 @@ namespace Lofas.SportsTracks.Hitta_SE_MapProvider
         }
                         
 
-//#if ENIRO_TODO_DOWNLOAD
         private class MapImageObj
         {
             public double cx;
             public double cy;
             public double Scale;
         }
-//#endif
+
         WebClient wc = new WebClient();
         Random rnd = new Random();
         private void queueDownload(double cx, double cy, int iRx, int iRy, double useZoomLevel, IMapImageReadyListener listener)
@@ -254,7 +248,6 @@ namespace Lofas.SportsTracks.Hitta_SE_MapProvider
             string item = iRx + "_" + iRy + "_" + useZoomLevel.ToString();
             if (!m_DownloadQueueItems.ContainsKey(item))
             {
-#if ENIRO_TODO_DOWNLOAD
                 m_DownloadQueueItems.Add(item,"");
                 ThreadPool.QueueUserWorkItem(new WaitCallback(delegate(object o)
                     {
@@ -268,7 +261,7 @@ namespace Lofas.SportsTracks.Hitta_SE_MapProvider
                                     if (!Directory.Exists(downloadDir))
                                         Directory.CreateDirectory(downloadDir);
 
-                                    int zoomLevelIdx = Array.IndexOf(m_Proj.scaleValues, useZoomLevel);
+                                    //int zoomLevelIdx = m_Proj.getZoomIndex(useZoomLevel);
                                     int src = rnd.Next(0,4);
 
                                     string ident = "standard";
@@ -283,7 +276,7 @@ namespace Lofas.SportsTracks.Hitta_SE_MapProvider
                                     }
 
                                     string url = "http://maps" + src + ".eniro.com/servlets/TilesDataServlet?id=" + m_ViewCountry + "_" +
-                                        ident + "_" + Convert.ToInt32(m_Proj.scaleValues.Length - zoomLevelIdx) + "_" + Convert.ToInt32(useZoomLevel) + ".0_58.0_256_128_" + iRx + "_" + iRy;
+                                        ident + "_" + m_Proj.getZoomIndex(useZoomLevel) + "_" + Convert.ToInt32(useZoomLevel) + ".0_58.0_256_128_" + iRx + "_" + iRy;
                                     wc.Headers.Add("User-Agent", "Mozilla/5.0 (Windows; U; Windows NT 5.1; sv-SE; rv:1.9.0.4) Gecko/2008102920 Firefox/3.0.4");
                                     Image img = Image.FromStream(wc.OpenRead(url));
 
@@ -311,15 +304,19 @@ namespace Lofas.SportsTracks.Hitta_SE_MapProvider
                         m_DownloadQueueItems.Remove(item);
 
                     }));
-#endif
             }
+        }
+
+        private string getCacheFileName(int iRx, int iRy, double useZoomLevel)
+        {
+            string downloadDir = Path.Combine(m_CacheDirectory, useZoomLevel.ToString());
+            string str = Path.Combine(downloadDir, iRx + "_" + iRy + "." + m_ImageExt);
+            return str;
         }
 
         private Image getImageFromCache(int iRx, int iRy, double useZoomLevel)
         {
-            //GC.Collect();
-                            string downloadDir = Path.Combine(m_CacheDirectory, useZoomLevel.ToString());
-                string str = Path.Combine(downloadDir, iRx + "_" + iRy + "." + m_ImageExt);
+            string str = getCacheFileName(iRx, iRy, useZoomLevel);
 
             try
             {
@@ -341,8 +338,7 @@ namespace Lofas.SportsTracks.Hitta_SE_MapProvider
 
         private bool isCached(int iRx, int iRy, double useZoomLevel)
         {
-            string downloadDir = Path.Combine(m_CacheDirectory, useZoomLevel.ToString());
-            string str = Path.Combine(downloadDir, iRx + "_" + iRy + "." + m_ImageExt);
+            string str = getCacheFileName(iRx, iRy, useZoomLevel);
             return File.Exists(str);
         }
 

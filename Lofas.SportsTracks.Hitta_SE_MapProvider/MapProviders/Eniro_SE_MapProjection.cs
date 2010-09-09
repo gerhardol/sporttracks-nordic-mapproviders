@@ -99,6 +99,10 @@ namespace Lofas.SportsTracks.Hitta_SE_MapProvider
             y = _48d;
         }
 
+        public int getZoomIndex(double useZoomLevel)
+        {
+            return Convert.ToInt32(scaleValues.Length - Array.IndexOf(scaleValues, useZoomLevel));
+        }
 
         public double getMetersPerPixel(double zoomLevel, out double tileMeterPerPixel, out double eniroscale)
         {
@@ -379,8 +383,8 @@ myObj = s3;
 
 
 
-                    double wMeterPerPixel = (tileLRX_M - tileUlX_M) / (2*tileX2);
-                    double hMeterPerPixel = (tileUlY_M - tileLRY_M) / (2 * tileY2);
+                    double wMeterPerPixel = (tileLRX_M - tileUlX_M) / (float)(2*tileX2);
+                    double hMeterPerPixel = (tileUlY_M - tileLRY_M) / (float)(2*tileY2);
                     //object test = Result["zoomLevel"];
                     if (!Directory.Exists(Path.Combine(m_CacheDirectory, useScale.ToString())))
                     {
@@ -460,8 +464,8 @@ myObj = s3;
                 throw new ApplicationException("Eniro-Server changed!",ee);
             }
 
-            double dx = pixel.X / (2*tileX2) * lengthDegreesX;
-            double dy = pixel.Y / (2*tileY2) * lengthDegreesY;
+            double dx = pixel.X / (float)(2 * tileX2) * lengthDegreesX;
+            double dy = pixel.Y / (float)(2 * tileY2) * lengthDegreesY;
 
             //double hittascale;
             //double tileMeterPerPixel;
