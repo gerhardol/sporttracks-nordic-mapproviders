@@ -49,15 +49,16 @@ namespace Lofas.SportsTracks.Hitta_SE_MapProvider
         private readonly string m_CacheDirectory;
         private readonly Dictionary<string, string> m_DownloadQueueItems;
 
-        private readonly string m_View;
+        //private readonly string m_View;
         private readonly string m_ImageExt;
         private readonly string m_Name;
         private readonly Guid m_GUID;
         private readonly Hitta_SE_MapProjection m_Proj = new Hitta_SE_MapProjection();
+        private readonly string m_BaseUrl;
 
         public Hitta_SE_MapProvider(string view)
         {
-            m_View = view;
+            //m_View = view;
             m_CacheDirectory = Path.Combine(
 #if ST_2_1
                 Plugin.m_Application.SystemPreferences.WebFilesFolder, "MapTiles" + 
@@ -66,7 +67,7 @@ namespace Lofas.SportsTracks.Hitta_SE_MapProvider
 #endif
                 Path.DirectorySeparatorChar + "Hitta_SE_" + view);
             m_DownloadQueueItems = new Dictionary<string, string>();
-            if (m_View == "Sat")
+            if (view == "Sat")
             {
                 m_ImageExt = "jpg";
                 m_GUID = new Guid("23FBB14A-0949-4d42-BAA4-95C3AC3BC825");
@@ -78,6 +79,16 @@ namespace Lofas.SportsTracks.Hitta_SE_MapProvider
                 m_GUID = new Guid("9BD470DD-3078-456f-8175-1A714D286B90");
                 m_Name = "Hitta.se Karta";
             }
+            string url = "http://karta.hitta.se/mapstore/service/tile/";
+            if (view == "Sat")
+            {
+                url += "1/";
+            }
+            else
+            {
+                url += "0/";
+            }
+            m_BaseUrl = url;
         }
 
         public void ClearDownloadQueue()
@@ -92,15 +103,13 @@ namespace Lofas.SportsTracks.Hitta_SE_MapProvider
 
         public int DrawMap(IMapImageReadyListener listener, System.Drawing.Graphics graphics, System.Drawing.Rectangle drawRectangle, System.Drawing.Rectangle clipRectangle, ZoneFiveSoftware.Common.Data.GPS.IGPSLocation center, double zoomLevel)
         {
-            double x, y;//, origx, origy;
+            double x, y;
 
-            if (center.LatitudeDegrees < 0 || center.LongitudeDegrees < 0 || center.LongitudeDegrees > 40)
-                return 0;
-
-            CFProjection.WGS84ToRT90(center.LatitudeDegrees, center.LongitudeDegrees, 0, out x, out y);
-
-            int numQueued = DrawTiles(listener, graphics, ref drawRectangle, zoomLevel, x, y);
-
+            int numQueued = 0;
+            if (0 < m_Proj.WGS84ToRT90(center, out x, out y))
+            {
+                numQueued = DrawTiles(listener, graphics, ref drawRectangle, zoomLevel, x, y);
+            }
             return numQueued;
         }
 
@@ -287,18 +296,7 @@ namespace Lofas.SportsTracks.Hitta_SE_MapProvider
                                     int column = (int)(((cx - bottomLeftX)) / (2*tileX2 * resolution));
                                     int row = (int)(((cy - bottomLeftY)) / (2*tileY2 * resolution));
                                     string geoCenterString = row + "/" + column;
-                                    string url = "http://karta.hitta.se/mapstore/service/tile/";
-                                    if (m_View == "Sat")
-                                    {
-                                        url += "1/";
-                                    }
-                                    else
-                                    {
-                                        url += "0/";
-                                    }
-
-                                    url += resolution.ToString(CultureInfo.InvariantCulture) + "/";
-                                    url += geoCenterString;
+                                    string url = m_BaseUrl + resolution.ToString(CultureInfo.InvariantCulture) + "/" + geoCenterString;
 #endif
 
                                     Image img = Image.FromStream(wc.OpenRead(url));
@@ -314,13 +312,16 @@ namespace Lofas.SportsTracks.Hitta_SE_MapProvider
 #if ST_2_1
                             listener.NotifyMapImageReady(obj);
 #else
-                            double latN, latS, longW, longE;
+                            double latN, latS, longW, longE, latN2, latS2, longW2, longE2;
 
                             //TODO: Are the bounds correct?
                             CFProjection.RT90ToWGS84(cx, cy, out latN, out longW);
-                            CFProjection.RT90ToWGS84(iRx/10, iRy/10, out latS, out longE);
-                            listener.InvalidateRegion(new GPSBounds(new GPSLocation((float)latN, (float)longW), 
-                                new GPSLocation((float)latS, (float)longE)));
+                            CFProjection.RT90ToWGS84(iRx / 10, iRy / 10, out latS, out longE);
+                            CFProjection.RT90ToWGS84(cx, iRy / 10, out latN2, out longE2);
+                            CFProjection.RT90ToWGS84(iRx / 10, cy, out latS2, out longW2);
+                            listener.InvalidateRegion(new GPSBounds(
+                                new GPSLocation((float)Math.Max(latN, latN2), (float)Math.Min(longW, longW2)), 
+                                new GPSLocation((float)Math.Min(latS, latS2), (float)Math.Max(longE, longE2))));
 #endif
                         }
                         catch (Exception)
@@ -386,7 +387,8 @@ namespace Lofas.SportsTracks.Hitta_SE_MapProvider
 
         public bool SupportsFractionalZoom
         {
-            get { return true; }
+//TODO            get { return true; }
+            get { return false; }
         }
 
         public string Name

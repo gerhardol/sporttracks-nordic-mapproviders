@@ -54,7 +54,8 @@ namespace Lofas.SportsTracks.Hitta_SE_MapProvider
         public string m_View;
         string m_ImageExt;
         string m_ViewCountry = "SE_sv";
-        public string infoUrl = "http://kartor.eniro.se/mapapi/servlets/dwr-invoker/call/plaincall/TilesService.initializeEniMap.dwr";
+        private readonly string m_InfoUrl;
+        private readonly string m_BaseUrl;
         private readonly string m_Name;
         private readonly Guid m_GUID;
         private readonly Eniro_SE_MapProjection m_Proj;
@@ -71,7 +72,11 @@ namespace Lofas.SportsTracks.Hitta_SE_MapProvider
 
             if (country.StartsWith("FI"))
             {
-                infoUrl = "http://kartat.eniro.fi/mapapi/servlets/dwr-invoker/call/plaincall/TilesService.getEniMapInfo.dwr";
+                m_InfoUrl = "http://kartat.eniro.fi/mapapi/servlets/dwr-invoker/call/plaincall/TilesService.getEniMapInfo.dwr";
+            }
+            else
+            {
+                m_InfoUrl = "http://kartor.eniro.se/mapapi/servlets/dwr-invoker/call/plaincall/TilesService.initializeEniMap.dwr";
             }
 
 
@@ -140,7 +145,9 @@ namespace Lofas.SportsTracks.Hitta_SE_MapProvider
                     break;
             }
 
-            string reqUrlBase = infoUrl +
+            m_BaseUrl = "http://maps{0}.eniro.com/servlets/TilesDataServlet?id=" + m_ViewCountry + "_" + ident;
+
+            string reqUrlBase = m_InfoUrl +
                 "?callCount=1&page=%2F&httpSessionId=&scriptSessionId=A5D21E9D83F2E4EA745B637926180464446&c0-scriptName=TilesService&c0-methodName=initializeEniMap&c0-id=0&c0-param0=string%3ASE&c0-param1=string%3A&c0-param2=string%3A" +
                 ident + "&c0-e1=number%3A";
             m_Proj = new Eniro_SE_MapProjection(m_CacheDirectory, reqUrlBase);
@@ -261,22 +268,9 @@ namespace Lofas.SportsTracks.Hitta_SE_MapProvider
                                     if (!Directory.Exists(downloadDir))
                                         Directory.CreateDirectory(downloadDir);
 
-                                    //int zoomLevelIdx = m_Proj.getZoomIndex(useZoomLevel);
                                     int src = rnd.Next(0,4);
 
-                                    string ident = "standard";
-                                    switch (m_View)
-                                    {
-                                        case "Sat":
-                                            ident = "aerial";
-                                            break;
-                                        case "Nat":
-                                            ident = "nautical";
-                                            break;
-                                    }
-
-                                    string url = "http://maps" + src + ".eniro.com/servlets/TilesDataServlet?id=" + m_ViewCountry + "_" +
-                                        ident + "_" + m_Proj.getZoomIndex(useZoomLevel) + "_" + Convert.ToInt32(useZoomLevel) + ".0_58.0_256_128_" + iRx + "_" + iRy;
+                                    string url = string.Format(m_BaseUrl, src) + "_" + m_Proj.getZoomIndex(useZoomLevel) + "_" + Convert.ToInt32(useZoomLevel) + ".0_58.0_256_128_" + iRx + "_" + iRy;
                                     wc.Headers.Add("User-Agent", "Mozilla/5.0 (Windows; U; Windows NT 5.1; sv-SE; rv:1.9.0.4) Gecko/2008102920 Firefox/3.0.4");
                                     Image img = Image.FromStream(wc.OpenRead(url));
 
