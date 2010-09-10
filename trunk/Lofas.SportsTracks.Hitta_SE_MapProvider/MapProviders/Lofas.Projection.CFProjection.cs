@@ -342,8 +342,8 @@ namespace Lofas.Projection
 
             geocentric_to_geodetic(dst_a, dst_es, ref x, ref y, ref z);
 
-            lat = x * rad2deg;
-            lon = y * rad2deg;
+            lon = x * rad2deg;
+            lat = y * rad2deg;
         }
 
         /// <summary>

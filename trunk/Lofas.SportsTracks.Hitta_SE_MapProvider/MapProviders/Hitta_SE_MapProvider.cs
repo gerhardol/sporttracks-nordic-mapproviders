@@ -314,7 +314,6 @@ namespace Lofas.SportsTracks.Hitta_SE_MapProvider
 #else
                             double latN, latS, longW, longE, latN2, latS2, longW2, longE2;
 
-                            //TODO: Are the bounds correct?
                             CFProjection.RT90ToWGS84(cx, cy, out latN, out longW);
                             CFProjection.RT90ToWGS84(iRx / 10, iRy / 10, out latS, out longE);
                             CFProjection.RT90ToWGS84(cx, iRy / 10, out latN2, out longE2);
