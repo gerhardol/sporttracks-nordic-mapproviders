@@ -26,6 +26,7 @@ using System.Threading;
 using System.Net;
 using System.Globalization;
 using Lofas.Projection;
+using ZoneFiveSoftware.Common.Data.GPS;
 #if ST_2_1
 using ZoneFiveSoftware.Common.Visuals.Fitness.GPS;
 #else
@@ -44,6 +45,11 @@ namespace Lofas.SportsTracks.Hitta_SE_MapProvider
             return ZOOM_LEVELS[Array.IndexOf(scaleValues, useZoomLevel)];
         }
 
+        public double getMetersPerPixel(double zoomLevel)
+        {
+            double tileMeterPerPixel, hittascale;
+            return getMetersPerPixel(zoomLevel, out tileMeterPerPixel, out hittascale);
+        }
         public double getMetersPerPixel(double zoomLevel, out double tileMeterPerPixel, out double hittascale)
         {
             //double useZoomLevel = ZOOM_LEVELS[ZOOM_LEVELS.Length - 1];
@@ -59,38 +65,71 @@ namespace Lofas.SportsTracks.Hitta_SE_MapProvider
                 }
             }*/
 
-            int zoomLevelInt = (int)Math.Floor(zoomLevel);
-            if (zoomLevelInt < 0) { zoomLevelInt = 0; }
-            if (zoomLevelInt >= ZOOM_LEVELS.Length) { zoomLevelInt = ZOOM_LEVELS.Length-1; }
+            int zoomLevelIndex = (int)Math.Floor(zoomLevel);
+            if (zoomLevelIndex < 0) { zoomLevelIndex = 0; }
+            if (zoomLevelIndex >= ZOOM_LEVELS.Length) { zoomLevelIndex = ZOOM_LEVELS.Length-1; }
 
-            double zoomLevelRest = zoomLevel - zoomLevelInt;
-            double useZoomLevel = ZOOM_LEVELS[zoomLevelInt];
-            double useScale = scaleValues[zoomLevelInt];
+            double useZoomLevel = ZOOM_LEVELS[zoomLevelIndex];
+            double useScale = scaleValues[zoomLevelIndex];
             tileMeterPerPixel = useZoomLevel;
-            if (zoomLevelRest > 0.5 && zoomLevelInt < ZOOM_LEVELS.Length - 1)
+
+            //Possibly adjust the values from the "fractional" rest part of the zoom
+            double zoomLevelRest = zoomLevel - zoomLevelIndex;
+            if (zoomLevelRest > 0.5 && zoomLevelIndex < ZOOM_LEVELS.Length - 1)
             {
-                tileMeterPerPixel = ZOOM_LEVELS[zoomLevelInt + 1];
-                useScale = scaleValues[zoomLevelInt + 1];
+                //The ST zoom is larger than the current, use next level
+                tileMeterPerPixel = ZOOM_LEVELS[zoomLevelIndex + 1];
+                useScale = scaleValues[zoomLevelIndex + 1];
             }
 
-            int level1 = zoomLevelInt;
-            int level2 = zoomLevelInt + 1;
-            if (level2 < ZOOM_LEVELS.Length - 1 && zoomLevelRest > 1e-6)
-                useZoomLevel += (zoomLevelRest * (ZOOM_LEVELS[level2] - ZOOM_LEVELS[level1]));
+            if (zoomLevelIndex < ZOOM_LEVELS.Length - 1 - 1 && zoomLevelRest > 1e-6)
+                useZoomLevel += (zoomLevelRest * (ZOOM_LEVELS[zoomLevelIndex + 1] - ZOOM_LEVELS[zoomLevelIndex]));
 
             hittascale = useScale;
 
             return useZoomLevel;
         }
 
-        public System.Drawing.Point GPSToPixel(ZoneFiveSoftware.Common.Data.GPS.IGPSLocation origin, double zoomLevel, ZoneFiveSoftware.Common.Data.GPS.IGPSLocation gps)
+        public int WGS84ToRT90(IGPSLocation gps, out double x, out double y)
         {
-            double hittascale;
-            double tileMeterPerPixel;
-            double metersPerPixel = getMetersPerPixel(zoomLevel, out tileMeterPerPixel, out hittascale);
-            double x, y, origx, origy;
+            int result;
+            //Approx Swedish coordinates
+            //Hitta.se has a few overview maps for Scandinavia, but nothing useful
+            if (gps.LatitudeDegrees < 55 || gps.LatitudeDegrees > 70|| 
+                gps.LongitudeDegrees < 10 || gps.LongitudeDegrees > 25)
+            {
+                //ST3 issue, calling w 0,0 when opening the activity
+                //As there must be a difference between points, transform to something hopefully in the area. 
+                //int lat0 = (int)gps.LatitudeDegrees;
+                //int lon0 = (int)gps.LongitudeDegrees;
+                //gps = new GPSLocation(gps.LatitudeDegrees - (int)gps.LatitudeDegrees + 60,
+                //    gps.LongitudeDegrees - (int)gps.LongitudeDegrees + 15);
+                result = 0;
+            }
+            else
+            {
+                result = 1;
+            }
             CFProjection.WGS84ToRT90(gps.LatitudeDegrees, gps.LongitudeDegrees, 0, out x, out y);
-            CFProjection.WGS84ToRT90(origin.LatitudeDegrees, origin.LongitudeDegrees, 0, out origx, out origy);
+            
+            return result;
+        }
+        public int RT90ToWGS84(double x, double y, out double lat, out double lon)
+        {
+            int result = 1;
+            CFProjection.RT90ToWGS84(x, y, out lat, out lon);
+            if (lat < 55 || lat > 70 || lon < 10 || lon > 25)
+            {
+                result = 0;
+            }
+            return result;
+        }
+        public System.Drawing.Point GPSToPixel(IGPSLocation origin, double zoomLevel, IGPSLocation gps)
+        {
+            double metersPerPixel = getMetersPerPixel(zoomLevel);
+            double x, y, origx, origy;
+            WGS84ToRT90(gps, out x, out y);
+            WGS84ToRT90(origin, out origx, out origy);
 
             int dx = (int)Math.Round((x - origx) / metersPerPixel);
             int dy = (int)Math.Round((origy - y) / metersPerPixel);
@@ -98,20 +137,18 @@ namespace Lofas.SportsTracks.Hitta_SE_MapProvider
             return new System.Drawing.Point(dx, dy);
         }
 
-        public ZoneFiveSoftware.Common.Data.GPS.IGPSLocation PixelToGPS(ZoneFiveSoftware.Common.Data.GPS.IGPSLocation origin, double zoomLevel, System.Drawing.Point pixel)
+        public IGPSLocation PixelToGPS(IGPSLocation origin, double zoomLevel, System.Drawing.Point pixel)
         {
-            double hittascale;
-            double tileMeterPerPixel;
-            double metersPerPixel = getMetersPerPixel(zoomLevel, out tileMeterPerPixel, out hittascale);
+            double metersPerPixel = getMetersPerPixel(zoomLevel);
 
             double lat, lon, origx, origy;
-            CFProjection.WGS84ToRT90(origin.LatitudeDegrees, origin.LongitudeDegrees, 0, out origx, out origy);
+            WGS84ToRT90(origin, out origx, out origy);
 
             double x = origx + pixel.X * metersPerPixel;
             double y = origy - pixel.Y * metersPerPixel;
 
-            CFProjection.RT90ToWGS84(x, y, out lat, out lon);
-            return new ZoneFiveSoftware.Common.Data.GPS.GPSLocation((float)lon, (float)lat);
+            RT90ToWGS84(x, y, out lat, out lon);
+            return new GPSLocation((float)lon, (float)lat);
         }
     }
 }
