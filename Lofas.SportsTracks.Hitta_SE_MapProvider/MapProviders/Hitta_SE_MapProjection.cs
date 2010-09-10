@@ -148,7 +148,7 @@ namespace Lofas.SportsTracks.Hitta_SE_MapProvider
             double y = origy - pixel.Y * metersPerPixel;
 
             RT90ToWGS84(x, y, out lat, out lon);
-            return new GPSLocation((float)lon, (float)lat);
+            return new GPSLocation((float)lat, (float)lon);
         }
     }
 }
