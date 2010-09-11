@@ -52,7 +52,7 @@ namespace Lofas.SportsTracks.Hitta_SE_MapProvider
 
     public class Hitta_SE_ExtensionProviders : IExtendMapTileProviders
     {
-        private IList<IMapTileProvider> m_List = null;
+        private static IList<IMapTileProvider> m_List = null;
         public IList<IMapTileProvider> MapTileProviders
         {
             get {
@@ -61,9 +61,8 @@ namespace Lofas.SportsTracks.Hitta_SE_MapProvider
                     m_List = new List<IMapTileProvider>();
                     m_List.Add(new Hitta_SE_MapProvider("Sat"));
                     m_List.Add(new Hitta_SE_MapProvider("Map"));
-                    //Eniro not working now
-                    //m_List.Add(new Eniro_SE_MapProvider("Sat"));
-                    //m_List.Add(new Eniro_SE_MapProvider("Map"));
+                    m_List.Add(new Eniro_SE_MapProvider("Sat"));
+                    m_List.Add(new Eniro_SE_MapProvider("Map"));
                     m_List.Add(new Eniro_SE_MapProvider("Nat"));
                     //m_List.Add(new Eniro_SE_MapProvider("Map","FI_fi"));
                 }

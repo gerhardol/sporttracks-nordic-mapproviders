@@ -106,8 +106,9 @@ namespace Lofas.SportsTracks.Hitta_SE_MapProvider
             double x, y;
 
             int numQueued = 0;
-            if (0 < m_Proj.WGS84ToRT90(center, out x, out y))
+            if (0 < Hitta_SE_MapProjection.isValidPoint(center))
             {
+                Hitta_SE_MapProjection.WGS84ToRT90(center, out x, out y);
                 numQueued = DrawTiles(listener, graphics, ref drawRectangle, zoomLevel, x, y);
             }
             return numQueued;
@@ -118,7 +119,7 @@ namespace Lofas.SportsTracks.Hitta_SE_MapProvider
         {
             double useScale;
             double tileMeterPerPixel;
-            double metersPerPixel = m_Proj.getMetersPerPixel(zoomLevel, out tileMeterPerPixel, out useScale);
+            double metersPerPixel = Hitta_SE_MapProjection.getMetersPerPixel(zoomLevel, out tileMeterPerPixel, out useScale);
 
             double ulX = Math.Round(x - ((drawRectangle.Width / 2) * metersPerPixel),1);
             double ulY = Math.Round(y + ((drawRectangle.Height / 2) * metersPerPixel),1);
@@ -145,7 +146,7 @@ namespace Lofas.SportsTracks.Hitta_SE_MapProvider
             int bottomLeftX = 451424;
             int bottomLeftY = 5651424;
 
-            double resolution = m_Proj.getResolution(useScale);
+            double resolution = Hitta_SE_MapProjection.getResolution(useScale);
             int Tcolumn = (int)(((startTileX + tileMeterPerPixel * tileX2 - bottomLeftX)) / (2*tileX2 * resolution));
             int Trow = (int)(((startTileY - tileMeterPerPixel * tileY2 - bottomLeftY)) / (2*tileY2 * resolution));
 
@@ -280,16 +281,13 @@ namespace Lofas.SportsTracks.Hitta_SE_MapProvider
                             {
                                 if (m_DownloadQueueItems.ContainsKey(item))
                                 {
-                                    string downloadDir = Path.Combine(m_CacheDirectory, useZoomLevel.ToString());
-                                    if (!Directory.Exists(downloadDir))
-                                        Directory.CreateDirectory(downloadDir);
 
 #if nontile
                                     string url = "http://map.hitta.se/SpatialAceWMS/RWCInterface.axd?view=Hitta.MainView&format=" + m_ImageExt + "&transparent=false&layers=MainView/" + m_View + "Layer&width=256&height=256&scale=" + useZoomLevel + "&x=" + cx.ToString(CultureInfo.InvariantCulture) + "&y=" + cy.ToString(CultureInfo.InvariantCulture);
 #else
                                     int bottomLeftX = 451424;
                                     int bottomLeftY = 5651424;
-                                    double resolution = m_Proj.getResolution(useZoomLevel);
+                                    double resolution = Hitta_SE_MapProjection.getResolution(useZoomLevel);
                                     //int column = (int)Math.Round(((cx  - bottomLeftX + ((2*tileX2 / 2) *resolution))) / (2*tileX2 * resolution), 0);
                                     //int row = (int)Math.Round(((cy - bottomLeftY + ((2*tileY2 / 2) * resolution))) / (2*tileY2 * resolution), 0);
 
@@ -300,8 +298,7 @@ namespace Lofas.SportsTracks.Hitta_SE_MapProvider
 #endif
 
                                     Image img = Image.FromStream(wc.OpenRead(url));
-                                    //wc.DownloadFile(url, "cache\\sat_" + iRx + "_" + iRy + "_" + useZoomLevel + ".jpg");
-                                    img.Save(Path.Combine(downloadDir, iRx + "_" + iRy + "." + m_ImageExt));
+                                    img.Save(getFilePath(iRx, iRy, useZoomLevel, true));
                                     img.Dispose();
                                 }
                             }
@@ -314,10 +311,12 @@ namespace Lofas.SportsTracks.Hitta_SE_MapProvider
 #else
                             double latN, latS, longW, longE, latN2, latS2, longW2, longE2;
 
-                            CFProjection.RT90ToWGS84(cx, cy, out latN, out longW);
-                            CFProjection.RT90ToWGS84(iRx / 10, iRy / 10, out latS, out longE);
-                            CFProjection.RT90ToWGS84(cx, iRy / 10, out latN2, out longE2);
-                            CFProjection.RT90ToWGS84(iRx / 10, cy, out latS2, out longW2);
+                            //Get max WGS84 coordinates
+                            //As only valid tiles should be requested, there is no check that the coords are in bounds
+                            Hitta_SE_MapProjection.RT90ToWGS84(cx, cy, out latN, out longW);
+                            Hitta_SE_MapProjection.RT90ToWGS84(iRx / 10, iRy / 10, out latS, out longE);
+                            Hitta_SE_MapProjection.RT90ToWGS84(cx, iRy / 10, out latN2, out longE2);
+                            Hitta_SE_MapProjection.RT90ToWGS84(iRx / 10, cy, out latS2, out longW2);
                             listener.InvalidateRegion(new GPSBounds(
                                 new GPSLocation((float)Math.Max(latN, latN2), (float)Math.Min(longW, longW2)), 
                                 new GPSLocation((float)Math.Min(latS, latS2), (float)Math.Max(longE, longE2))));
@@ -334,10 +333,20 @@ namespace Lofas.SportsTracks.Hitta_SE_MapProvider
             }
         }
 
-        private Image getImageFromCache(int iRx, int iRy, double useZoomLevel)
+        private string getFilePath(int iRx, int iRy, double useZoomLevel, bool createDir)
         {
             string downloadDir = Path.Combine(m_CacheDirectory, useZoomLevel.ToString());
-            string str = Path.Combine(downloadDir, iRx + "_" + iRy + "." + m_ImageExt);
+            if (createDir && !Directory.Exists(downloadDir))
+                Directory.CreateDirectory(downloadDir);
+            return Path.Combine(downloadDir, iRx + "_" + iRy + "." + m_ImageExt);
+        }
+        private string getFilePath(int iRx, int iRy, double useZoomLevel)
+        {
+            return getFilePath(iRx, iRy, useZoomLevel, false);
+        }
+        private Image getImageFromCache(int iRx, int iRy, double useZoomLevel)
+        {
+            string str = getFilePath(iRx, iRy, useZoomLevel);
 
             try
             {
@@ -359,9 +368,7 @@ namespace Lofas.SportsTracks.Hitta_SE_MapProvider
 
         private bool isCached(int iRx, int iRy, double useZoomLevel)
         {
-            string downloadDir = Path.Combine(m_CacheDirectory, useZoomLevel.ToString());
-            string str = Path.Combine(downloadDir, iRx + "_" + iRy + "." + m_ImageExt);
-            return File.Exists(str);
+            return File.Exists(getFilePath(iRx, iRy, useZoomLevel));
         }
 
         public Guid Id
@@ -386,8 +393,7 @@ namespace Lofas.SportsTracks.Hitta_SE_MapProvider
 
         public bool SupportsFractionalZoom
         {
-//TODO            get { return true; }
-            get { return false; }
+            get { return true; }
         }
 
         public string Name
