@@ -37,20 +37,20 @@ namespace Lofas.SportsTracks.Hitta_SE_MapProvider
 {
     public class Hitta_SE_MapProjection : IMapProjection
     {
-        private readonly double[] scaleValues = { 756, 1890, 7559, 15118, 37795, 94488, 264567, 755906, 2645669, 13228346 };
-        private readonly double[] ZOOM_LEVELS = { 0.2, 0.5, 2, 4, 10, 25, 70, 200, 700, 3500 };
+        private static readonly double[] scaleValues = { 756, 1890, 7559, 15118, 37795, 94488, 264567, 755906, 2645669, 13228346 };
+        private static readonly double[] ZOOM_LEVELS = { 0.2, 0.5, 2, 4, 10, 25, 70, 200, 700, 3500 };
 
-        public double getResolution(double useZoomLevel)
+        public static double getResolution(double useZoomLevel)
         {
             return ZOOM_LEVELS[Array.IndexOf(scaleValues, useZoomLevel)];
         }
 
-        public double getMetersPerPixel(double zoomLevel)
+        public static double getMetersPerPixel(double zoomLevel)
         {
             double tileMeterPerPixel, hittascale;
             return getMetersPerPixel(zoomLevel, out tileMeterPerPixel, out hittascale);
         }
-        public double getMetersPerPixel(double zoomLevel, out double tileMeterPerPixel, out double hittascale)
+        public static double getMetersPerPixel(double zoomLevel, out double tileMeterPerPixel, out double hittascale)
         {
             //double useZoomLevel = ZOOM_LEVELS[ZOOM_LEVELS.Length - 1];
             //double useScale = scaleValues[scaleValues.Length - 1];
@@ -67,10 +67,10 @@ namespace Lofas.SportsTracks.Hitta_SE_MapProvider
 
             int zoomLevelIndex = (int)Math.Floor(zoomLevel);
             if (zoomLevelIndex < 0) { zoomLevelIndex = 0; }
-            if (zoomLevelIndex >= ZOOM_LEVELS.Length) { zoomLevelIndex = ZOOM_LEVELS.Length-1; }
+            if (zoomLevelIndex >= scaleValues.Length) { zoomLevelIndex = scaleValues.Length - 1; }
 
-            double useZoomLevel = ZOOM_LEVELS[zoomLevelIndex];
             double useScale = scaleValues[zoomLevelIndex];
+            double useZoomLevel = ZOOM_LEVELS[zoomLevelIndex];
             tileMeterPerPixel = useZoomLevel;
 
             //Possibly adjust the values from the "fractional" rest part of the zoom
@@ -90,45 +90,39 @@ namespace Lofas.SportsTracks.Hitta_SE_MapProvider
             return useZoomLevel;
         }
 
-        public int WGS84ToRT90(IGPSLocation gps, out double x, out double y)
+        public static int isValidPoint(IGPSLocation gps)
         {
-            int result;
+            return isValidPoint(gps.LatitudeDegrees, gps.LongitudeDegrees);
+        }
+        public static int isValidPoint(double lat, double lon)
+        {
             //Approx Swedish coordinates
             //Hitta.se has a few overview maps for Scandinavia, but nothing useful
-            if (gps.LatitudeDegrees < 55 || gps.LatitudeDegrees > 70|| 
-                gps.LongitudeDegrees < 10 || gps.LongitudeDegrees > 25)
+            if (lat < 55 || lat > 70 || lon < 10 || lon > 25)
             {
-                //ST3 issue, calling w 0,0 when opening the activity
-                //As there must be a difference between points, transform to something hopefully in the area. 
-                //int lat0 = (int)gps.LatitudeDegrees;
-                //int lon0 = (int)gps.LongitudeDegrees;
-                //gps = new GPSLocation(gps.LatitudeDegrees - (int)gps.LatitudeDegrees + 60,
-                //    gps.LongitudeDegrees - (int)gps.LongitudeDegrees + 15);
-                result = 0;
+                return 0;
             }
-            else
-            {
-                result = 1;
-            }
+            return 1;
+        }
+        public static int WGS84ToRT90(IGPSLocation gps, out double x, out double y)
+        {
+            int result = isValidPoint(gps);
             CFProjection.WGS84ToRT90(gps.LatitudeDegrees, gps.LongitudeDegrees, 0, out x, out y);
             
             return result;
         }
-        public int RT90ToWGS84(double x, double y, out double lat, out double lon)
+        public static int RT90ToWGS84(double x, double y, out double lat, out double lon)
         {
-            int result = 1;
             CFProjection.RT90ToWGS84(x, y, out lat, out lon);
-            if (lat < 55 || lat > 70 || lon < 10 || lon > 25)
-            {
-                result = 0;
-            }
+            int result = isValidPoint(lat, lon);
+
             return result;
         }
         public System.Drawing.Point GPSToPixel(IGPSLocation origin, double zoomLevel, IGPSLocation gps)
         {
             double metersPerPixel = getMetersPerPixel(zoomLevel);
             double x, y, origx, origy;
-            WGS84ToRT90(gps, out x, out y);
+            WGS84ToRT90(gps, out x, out y); 
             WGS84ToRT90(origin, out origx, out origy);
 
             int dx = (int)Math.Round((x - origx) / metersPerPixel);

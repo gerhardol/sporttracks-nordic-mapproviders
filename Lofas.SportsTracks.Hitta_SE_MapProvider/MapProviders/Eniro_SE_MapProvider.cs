@@ -169,13 +169,9 @@ namespace Lofas.SportsTracks.Hitta_SE_MapProvider
             try
             {
                 double useScale;
-                double tileMeterPerPixel;
-                double metersPerPixel = m_Proj.getMetersPerPixel(zoomLevel, out tileMeterPerPixel, out useScale);
-
-
                 double refTileULX, refTileULY, tileWMetersPerPixel, tileHMetersPerPixel, lengthDegreesX, lengthDegreesY, centerLat, centerLon;
                 int refTileXOffset, refTileYOffset;
-                m_Proj.getScaleInfo(zoomLevel, center, out refTileULX, out refTileULY, out tileWMetersPerPixel, out tileHMetersPerPixel, out refTileXOffset, out refTileYOffset, out lengthDegreesX, out lengthDegreesY, out centerLat, out centerLon);
+                m_Proj.getScaleInfo(zoomLevel, center, out useScale, out refTileULX, out refTileULY, out tileWMetersPerPixel, out tileHMetersPerPixel, out refTileXOffset, out refTileYOffset, out lengthDegreesX, out lengthDegreesY, out centerLat, out centerLon);
 
                 double dy = (center.LatitudeDegrees - centerLon) / lengthDegreesY;
                 double dx = (center.LongitudeDegrees - centerLat) / lengthDegreesX;
@@ -186,7 +182,7 @@ namespace Lofas.SportsTracks.Hitta_SE_MapProvider
                 int startTileY = refTileYOffset + numTilesDY;
 
                 int tileDrawDX = (int)(-1 * (dx - numTilesDX) * 2*tileX2) - tileY2;
-                int tileDrawDY = (int)(1 * (dy - numTilesDY) * 2*tileY2) - tileY2;
+                int tileDrawDY = (int)( 1 * (dy - numTilesDY) * 2*tileY2) - tileY2;
 
                 int numTilesX = (int)Math.Ceiling(drawRectangle.Width / (float)(2 * tileX2));
                 int numTilesY = (int)Math.Ceiling(drawRectangle.Height / (float)(2 * tileY2));
@@ -197,7 +193,6 @@ namespace Lofas.SportsTracks.Hitta_SE_MapProvider
                 {
                     for (int tileY = startTileY + numTilesY / 2; tileY >= startTileY - numTilesY / 2; tileY--)
                     {
-
                         int col = tileX - startTileX;
                         int row = startTileY - tileY;
                         if (isCached(tileX, tileY, useScale))
@@ -210,14 +205,6 @@ namespace Lofas.SportsTracks.Hitta_SE_MapProvider
                         }
                         else
                         {
-                            //string url = "http://maps1.eniro.com/servlets/TilesDataServlet?id=SE_sv_" +
-                            //    (m_View == "Sat" ? "aerial" : "standard") + "_" + Convert.ToInt32(scaleValues.Length - zoomLevel) + "_" + Convert.ToInt32(useScale) + ".0_58.0_256_128_" + tileX + "_" + tileY;
-                            //img = Image.FromStream(wc.OpenRead(url));
-                            //string downloadDir = Path.Combine(m_CacheDirectory, useScale.ToString());
-                            //if (!Directory.Exists(downloadDir))
-                            //    Directory.CreateDirectory(downloadDir);
-
-                            //img.Save(Path.Combine(downloadDir, tileX + "_" + tileY + "." + m_ImageExt));
                             int cX = (int)Math.Floor((double)(tileDrawDX + col * 2*tileX2)) + tileY2;
                             int cY = (int)Math.Floor((double)(tileDrawDY + row * 2*tileY2)) + tileY2;
                             double latC = center.LongitudeDegrees + cX / (float)(2 * tileX2) * lengthDegreesX;
@@ -264,17 +251,13 @@ namespace Lofas.SportsTracks.Hitta_SE_MapProvider
                             {
                                 if (m_DownloadQueueItems.ContainsKey(item))
                                 {
-                                    string downloadDir = Path.Combine(m_CacheDirectory, useZoomLevel.ToString());
-                                    if (!Directory.Exists(downloadDir))
-                                        Directory.CreateDirectory(downloadDir);
-
                                     int src = rnd.Next(0,4);
 
-                                    string url = string.Format(m_BaseUrl, src) + "_" + m_Proj.getZoomIndex(useZoomLevel) + "_" + Convert.ToInt32(useZoomLevel) + ".0_58.0_256_128_" + iRx + "_" + iRy;
+                                    string url = string.Format(m_BaseUrl, src) + "_" + Eniro_SE_MapProjection.getZoomIndex(useZoomLevel) + "_" + Convert.ToInt32(useZoomLevel) + ".0_58.0_256_128_" + iRx + "_" + iRy;
                                     wc.Headers.Add("User-Agent", "Mozilla/5.0 (Windows; U; Windows NT 5.1; sv-SE; rv:1.9.0.4) Gecko/2008102920 Firefox/3.0.4");
                                     Image img = Image.FromStream(wc.OpenRead(url));
 
-                                    img.Save(Path.Combine(downloadDir, iRx + "_" + iRy+ "." + m_ImageExt));
+                                    img.Save(getFilePath(iRx, iRy, useZoomLevel, true));
                                     img.Dispose();
                                 }
                             }
@@ -287,6 +270,9 @@ namespace Lofas.SportsTracks.Hitta_SE_MapProvider
 #else
                             //TODO: Get bounds for tile, center is set
                             //listener.InvalidateRegion(new GPSBounds(
+//    new GPSLocation(cx +, cy -),
+//    new GPSLocation(cx-,cy+)));
+
 #endif
                         }
                         catch (Exception)
@@ -301,16 +287,21 @@ namespace Lofas.SportsTracks.Hitta_SE_MapProvider
             }
         }
 
-        private string getCacheFileName(int iRx, int iRy, double useZoomLevel)
+        private string getFilePath(int iRx, int iRy, double useZoomLevel, bool createDir)
         {
             string downloadDir = Path.Combine(m_CacheDirectory, useZoomLevel.ToString());
-            string str = Path.Combine(downloadDir, iRx + "_" + iRy + "." + m_ImageExt);
-            return str;
+            if (createDir && !Directory.Exists(downloadDir))
+                Directory.CreateDirectory(downloadDir);
+            return Path.Combine(downloadDir, iRx + "_" + iRy + "." + m_ImageExt);
+        }
+        private string getFilePath(int iRx, int iRy, double useZoomLevel)
+        {
+            return getFilePath(iRx, iRy, useZoomLevel, false);
         }
 
         private Image getImageFromCache(int iRx, int iRy, double useZoomLevel)
         {
-            string str = getCacheFileName(iRx, iRy, useZoomLevel);
+            string str = getFilePath(iRx, iRy, useZoomLevel);
 
             try
             {
@@ -332,7 +323,7 @@ namespace Lofas.SportsTracks.Hitta_SE_MapProvider
 
         private bool isCached(int iRx, int iRy, double useZoomLevel)
         {
-            string str = getCacheFileName(iRx, iRy, useZoomLevel);
+            string str = getFilePath(iRx, iRy, useZoomLevel);
             return File.Exists(str);
         }
 
@@ -386,26 +377,12 @@ namespace Lofas.SportsTracks.Hitta_SE_MapProvider
                 double cX = obj.cx;
                 double cY = obj.cy;
 
-                double useScale;
-                double tileMeterPerPixel;
-                double metersPerPixel = m_Proj.getMetersPerPixel(zoomLevel, out tileMeterPerPixel, out useScale);
-
-
                 double refTileULX, refTileULY, tileWMetersPerPixel, tileHMetersPerPixel, lengthDegreesX, lengthDegreesY, centerLat, centerLon;
                 int refTileXOffset, refTileYOffset;
                 m_Proj.getScaleInfo(zoomLevel, center, out refTileULX, out refTileULY, out tileWMetersPerPixel, out tileHMetersPerPixel, out refTileXOffset, out refTileYOffset, out lengthDegreesX, out lengthDegreesY, out centerLat, out centerLon);
 
                 double dy = -1*(center.LatitudeDegrees - cY) / lengthDegreesY * 2*tileY2;
                 double dx = -1*(center.LongitudeDegrees - cX) / lengthDegreesX * 2*tileX2;
-
-                /*int numTilesDX = (int)Math.Round(dx);
-                int numTilesDY = (int)Math.Round(dy);
-
-                int startTileX = refTileXOffset + numTilesDX;
-                int startTileY = refTileYOffset + numTilesDY;
-
-                int tileDrawDX = (int)(-1 * (dx - numTilesDX) * 2*tileX2) ;
-                int tileDrawDY = (int)(1 * (dy - numTilesDY) * 2*tileY2) ;*/
 
                 return Rectangle.FromLTRB((int)(drawRectangle.Width / 2.0 + dx - tileY2), (int)(drawRectangle.Height / 2.0 + dy - tileY2),
                     (int)(drawRectangle.Width / 2.0 + dx + tileY2), (int)(drawRectangle.Height / 2.0 + dy + tileY2));

@@ -40,11 +40,12 @@ namespace Lofas.SportsTracks.Hitta_SE_MapProvider
     {
         const int tileX2 = 128;
         const int tileY2 = 128;
-        //double[] ZOOM_LEVELS = { 0.2, 0.8, 2, 4, 10, 25, 70, 200, 700, 3500 };
-        private readonly double[] scaleValues = { 1000, 2000, 4000, 8200, 16000, 57000, 240000, 1000000, 4000000, 1.6384E7 };
+        const float dotSize = 0.0254F; // 0.000265 == meter/dpi
+        private static readonly double[] scaleValues = { 1000, 2000, 4000, 8200, 16000, 57000, 240000, 1000000, 4000000, 1.6384E7 };
         //public readonly double[] old_scaleValues = { 1000, 2000, 4000, 8200, 20000, 57000, 240000, 500000, 4000000, 20800000 };
         private readonly string m_CacheDirectory;
         private readonly string m_reqUrlBase;
+        private Dictionary<int, CacheTileInfo> m_TileInfoCache = new Dictionary<int, CacheTileInfo>();
 
         public Eniro_SE_MapProjection(string m_CacheDirectory, string m_reqUrlBase)
         {
@@ -65,7 +66,6 @@ namespace Lofas.SportsTracks.Hitta_SE_MapProvider
             public double lengthDegreesY;
             public double centerLat;
             public double centerLon;
-
         }
 
         public static void GeoToUTM(double lat, double lon, out double x, out double y)
@@ -99,92 +99,50 @@ namespace Lofas.SportsTracks.Hitta_SE_MapProvider
             y = _48d;
         }
 
-        public int getZoomIndex(double useZoomLevel)
+        public static int getZoomIndex(double useZoomLevel)
         {
             return Convert.ToInt32(scaleValues.Length - Array.IndexOf(scaleValues, useZoomLevel));
         }
 
-        public double getMetersPerPixel(double zoomLevel, out double tileMeterPerPixel, out double eniroscale)
+        private static double getMetersPerPixel(double zoomLevel, out double tileMeterPerPixel, out double eniroscale)
         {
+            int zoomLevelIndex = (int)Math.Floor(zoomLevel);
+            if (zoomLevelIndex < 0) { zoomLevelIndex = 0; }
+            if (zoomLevelIndex >= scaleValues.Length) { zoomLevelIndex = scaleValues.Length - 1; }
 
-            //double useZoomLevel = ZOOM_LEVELS[ZOOM_LEVELS.Length - 1];
-            //double useScale = scaleValues[scaleValues.Length - 1];
-            //double minDist = Double.MaxValue;
-            /*for (int i = ZOOM_LEVELS.Length - 1; i >= 0; i--)
-            {
-                if (Math.Abs(zoomLevel - ZOOM_LEVELS[i]) < minDist)
-                {
-                    useZoomLevel = ZOOM_LEVELS[i];
-                    useScale = scaleValues[i];
-                    minDist = Math.Abs(zoomLevel - ZOOM_LEVELS[i]);
-                }
-            }*/
+            int level1 = zoomLevelIndex;
+            int level2 = zoomLevelIndex + 1;
 
-            int zoomLevelInt = (int)Math.Floor(zoomLevel);
-            if (zoomLevelInt < 0) { zoomLevelInt = 0; }
-            if (zoomLevelInt >= scaleValues.Length) { zoomLevelInt = scaleValues.Length - 1; }
-            int level1 = zoomLevelInt;
-            int level2 = zoomLevelInt + 1;
-            double zoomLevelRest = zoomLevel - zoomLevelInt;
-            //useZoomLevel = ZOOM_LEVELS[zoomLevelInt];
-            double useScale = scaleValues[zoomLevelInt];
-            double useZoomLevel = useScale * 0.0254 / tileX2; // 0.000265 == meter/dpi
+            double useScale = scaleValues[zoomLevelIndex];
+            double useZoomLevel = useScale * dotSize / tileX2; 
             tileMeterPerPixel = useZoomLevel;
 
-            if (zoomLevelRest > 0.5)
+            //Possibly adjust the values from the "fractional" rest part of the zoom
+            double zoomLevelRest = zoomLevel - zoomLevelIndex;
+            if (zoomLevelRest > 0.5 && zoomLevelIndex < scaleValues.Length - 1)
             {
-                //tileMeterPerPixel = ZOOM_LEVELS[zoomLevelInt + 1];
-                useScale = scaleValues[zoomLevelInt + 1];
+                useScale = scaleValues[zoomLevelIndex + 1];
                 tileMeterPerPixel = useScale * 0.000265;
             }
 
-            if (level2 < scaleValues.Length - 1 && zoomLevelRest > 1e-6)
-                useZoomLevel += (zoomLevelRest * (scaleValues[level2] * 0.0254 / tileX2 - scaleValues[level1] * 0.0254 / tileX2));
+            if (zoomLevelIndex < scaleValues.Length - 1 - 1 && zoomLevelRest > 1e-6)
+                useZoomLevel += (zoomLevelRest * (scaleValues[level2] * dotSize / tileX2 - scaleValues[level1] * dotSize / tileX2));
 
             eniroscale = useScale;
 
             return useZoomLevel;
         }
 
-        Dictionary<int, CacheTileInfo> m_TileInfoCache = new Dictionary<int, CacheTileInfo>();
-        public System.Drawing.Point GPSToPixel(ZoneFiveSoftware.Common.Data.GPS.IGPSLocation origin, double zoomLevel, ZoneFiveSoftware.Common.Data.GPS.IGPSLocation gps)
+        //This method contains info about providers, that is hard to separate
+        public void getScaleInfo(double zoomLevel, ZoneFiveSoftware.Common.Data.GPS.IGPSLocation gps, out double refTileULX, out double refTileULY, out double tileWMetersPerPixel, out double tileHMetersPerPixel, out int refTileXOffset, out int refTileYOffset, out double lengthDegreesX, out double lengthDegreesY, out double centerLat, out double centerLon)
         {
-            int dx, dy;
-            double lengthDegreesX, lengthDegreesY;
-            try
-            {
-                double refTileULX, refTileULY, tileWMetersPerPixel, tileHMetersPerPixel, centerLat, centerLon;
-                int refTileXOffset, refTileYOffset;
-                getScaleInfo(zoomLevel, gps, out refTileULX, out refTileULY, out tileWMetersPerPixel, out tileHMetersPerPixel, out refTileXOffset, out refTileYOffset, out lengthDegreesX, out lengthDegreesY, out centerLat, out centerLon);
-
-                //double hittascale;
-                //double tileMeterPerPixel;
-                //double metersPerPixel = getMetersPerPixel(zoomLevel,out tileMeterPerPixel, out hittascale);
-                ///double x, y, origx, origy;
-                //Triona.Util.CFProjection.WGS84ToRT90(gps.LatitudeDegrees, gps.LongitudeDegrees, 0, out x, out y);
-                //Triona.Util.CFProjection.WGS84ToRT90(origin.LatitudeDegrees, origin.LongitudeDegrees, 0, out origx, out origy);
-                // GeoToUTM(gps.LatitudeDegrees, gps.LongitudeDegrees, out x, out y);
-                //GeoToUTM(origin.LatitudeDegrees, origin.LongitudeDegrees, out origx, out origy);
-
-                dx = (int)Math.Round((gps.LongitudeDegrees - origin.LongitudeDegrees) / lengthDegreesX * (2*tileX2));
-                dy = (int)Math.Round((origin.LatitudeDegrees - gps.LatitudeDegrees) / lengthDegreesY * 2*tileX2);
-            }
-            catch (Exception ee)
-            {
-                throw new ApplicationException("Eniro-Server changed!",ee);
-            }
-
-            //int dx = (int)Math.Round((x - origx) / tileWMetersPerPixel);
-            //int dy = (int)Math.Round((origy - y) / tileHMetersPerPixel);
-
-            return new System.Drawing.Point(dx, dy);
+            double useScale;
+            getScaleInfo(zoomLevel, gps, out useScale, out refTileULX, out refTileULY, out tileWMetersPerPixel, out tileHMetersPerPixel, out refTileXOffset, out refTileYOffset, out lengthDegreesX, out lengthDegreesY, out centerLat, out centerLon);
         }
-
-        //TODO: This method contains a little info about providers
-        public void getScaleInfo(double zoomLevel, ZoneFiveSoftware.Common.Data.GPS.IGPSLocation gps, out double refTileULX, out double refTileULY, out double tileWMetersPerPixel, out double tileHMetersPerPixel, out int refTileXOffset,out int refTileYOffset, out double lengthDegreesX, out double lengthDegreesY, out double centerLat, out double centerLon)
+        public void getScaleInfo(double zoomLevel, ZoneFiveSoftware.Common.Data.GPS.IGPSLocation gps, out double useScale, out double refTileULX, out double refTileULY, out double tileWMetersPerPixel, out double tileHMetersPerPixel, out int refTileXOffset,out int refTileYOffset, out double lengthDegreesX, out double lengthDegreesY, out double centerLat, out double centerLon)
         {
             
-            double useScale, tileMeterPerPixel;
+            double tileMeterPerPixel;
             getMetersPerPixel(zoomLevel, out tileMeterPerPixel, out useScale);
             if (m_TileInfoCache.ContainsKey((int)useScale))
             {
@@ -201,7 +159,7 @@ namespace Lofas.SportsTracks.Hitta_SE_MapProvider
                 centerLat = cti.centerLat;
 
             }
-                else
+            else
             {
                 string infoFile = Path.Combine(m_CacheDirectory, useScale + "\\tileInfo.txt");
                 if (!File.Exists(infoFile))
@@ -381,8 +339,6 @@ myObj = s3;
                     GeoToUTM(tileUlY, tileUlX, out tileUlX_M, out tileUlY_M);
                     GeoToUTM(tileLRY, tileLRX, out tileLRX_M, out tileLRY_M);
 
-
-
                     double wMeterPerPixel = (tileLRX_M - tileUlX_M) / (float)(2*tileX2);
                     double hMeterPerPixel = (tileUlY_M - tileLRY_M) / (float)(2*tileY2);
                     //object test = Result["zoomLevel"];
@@ -411,7 +367,6 @@ myObj = s3;
                     lengthDegreesY = lengthDegreeY;
                     centerLat = tileCX;
                     centerLon = tileCY;
-
                 }
                 else
                 {
@@ -427,7 +382,6 @@ myObj = s3;
                     lengthDegreesY = double.Parse(cnt[7], CultureInfo.InvariantCulture);
                     centerLat = double.Parse(cnt[8], CultureInfo.InvariantCulture);
                     centerLon = double.Parse(cnt[9], CultureInfo.InvariantCulture);
-
                 }
 
                 if (!m_TileInfoCache.ContainsKey((int)useScale))
@@ -446,13 +400,31 @@ myObj = s3;
                     m_TileInfoCache.Add((int)useScale, cti);
                 }
             }
-            //double t = 2*tileX2 * wMeterPerPixel + tileUlX_M;
-            //double t2 = lengthDegreeX * 2*tileX2;
+        }
+
+        public System.Drawing.Point GPSToPixel(ZoneFiveSoftware.Common.Data.GPS.IGPSLocation origin, double zoomLevel, ZoneFiveSoftware.Common.Data.GPS.IGPSLocation gps)
+        {
+            int dx, dy;
+            double lengthDegreesX, lengthDegreesY;
+            try
+            {
+                double refTileULX, refTileULY, tileWMetersPerPixel, tileHMetersPerPixel, centerLat, centerLon;
+                int refTileXOffset, refTileYOffset;
+                getScaleInfo(zoomLevel, gps, out refTileULX, out refTileULY, out tileWMetersPerPixel, out tileHMetersPerPixel, out refTileXOffset, out refTileYOffset, out lengthDegreesX, out lengthDegreesY, out centerLat, out centerLon);
+
+                dx = (int)Math.Round((gps.LongitudeDegrees - origin.LongitudeDegrees) / lengthDegreesX * (2 * tileX2));
+                dy = (int)Math.Round((origin.LatitudeDegrees - gps.LatitudeDegrees) / lengthDegreesY * 2 * tileX2);
+            }
+            catch (Exception ee)
+            {
+                throw new ApplicationException("Eniro-Server changed!", ee);
+            }
+
+            return new System.Drawing.Point(dx, dy);
         }
 
         public ZoneFiveSoftware.Common.Data.GPS.IGPSLocation PixelToGPS(ZoneFiveSoftware.Common.Data.GPS.IGPSLocation origin, double zoomLevel, System.Drawing.Point pixel)
         {
-
             double refTileULX, refTileULY, tileWMetersPerPixel, tileHMetersPerPixel, lengthDegreesX, lengthDegreesY, centerLat, centerLon;
             int refTileXOffset, refTileYOffset;
             try
@@ -467,18 +439,6 @@ myObj = s3;
             double dx = pixel.X / (float)(2 * tileX2) * lengthDegreesX;
             double dy = pixel.Y / (float)(2 * tileY2) * lengthDegreesY;
 
-            //double hittascale;
-            //double tileMeterPerPixel;
-            //double metersPerPixel = getMetersPerPixel(zoomLevel, out tileMeterPerPixel, out hittascale);
-
-            //double lat, lon, origx, origy;
-            //Triona.Util.CFProjection.WGS84ToRT90(origin.LatitudeDegrees, origin.LongitudeDegrees, 0, out origx, out origy);
-
-            //double x = origx + pixel.X*tileWMetersPerPixel;
-            //double y = origy - pixel.Y*tileHMetersPerPixel;
-
-
-            //Triona.Util.CFProjection.RT90ToWGS84(x, y, out lat, out lon);
             return new ZoneFiveSoftware.Common.Data.GPS.GPSLocation((float)(origin.LatitudeDegrees-dy),(float)(origin.LongitudeDegrees+dx));
         }
 
