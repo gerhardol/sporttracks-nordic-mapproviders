@@ -153,8 +153,6 @@ namespace Lofas.SportsTracks.Hitta_SE_MapProvider
             double colX = Tcolumn * 2*tileX2 * resolution + bottomLeftX;
             double rowY = Trow * 2*tileY2 * resolution + bottomLeftY;
 
-            
-
             if (rowY < ulY)
             {
                 Trow++;
