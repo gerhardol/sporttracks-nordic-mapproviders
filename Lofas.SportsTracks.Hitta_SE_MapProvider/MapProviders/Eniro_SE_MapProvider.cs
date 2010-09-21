@@ -152,7 +152,14 @@ namespace Lofas.SportsTracks.Hitta_SE_MapProvider
                 ident + "&c0-e1=number%3A";
             m_Proj = new Eniro_SE_MapProjection(m_CacheDirectory, reqUrlBase);
         }
- 
+
+        public bool Enabled
+        {
+            get
+            {
+                return Directory.Exists(m_CacheDirectory);
+            }
+        }
         public void ClearDownloadQueue()
         {
             m_DownloadQueueItems.Clear();
@@ -214,9 +221,7 @@ namespace Lofas.SportsTracks.Hitta_SE_MapProvider
                             numQueued++;
 #endif
                         }
-
                     }
-
                 }
             }
             catch (Exception ee)
