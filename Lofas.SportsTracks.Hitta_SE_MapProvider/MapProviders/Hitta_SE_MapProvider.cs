@@ -264,7 +264,7 @@ namespace Lofas.SportsTracks.Hitta_SE_MapProvider
             public double Scale;
         }
 
-        WebClient wc = new WebClient();
+        STWebClient wc = new STWebClient();
         private void queueDownload(double cx, double cy, int iRx, int iRy, double useZoomLevel, IMapImageReadyListener listener)
         {
             string item = iRx + "_" + iRy + "_" + useZoomLevel.ToString();
