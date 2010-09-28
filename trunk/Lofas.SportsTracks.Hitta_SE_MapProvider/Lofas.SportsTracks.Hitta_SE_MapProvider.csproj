@@ -16,6 +16,9 @@
     <Reference Include="Microsoft.Vsa" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="Common\STWebClient.cs">
+      <SubType>Component</SubType>
+    </Compile>
     <Compile Include="MapProviders\Eniro_SE_MapProjection.cs" />
     <Compile Include="MapProviders\Hitta_SE_MapProjection.cs" />
     <Compile Include="MapProviders\Lofas.Projection.CFProjection.cs" />
