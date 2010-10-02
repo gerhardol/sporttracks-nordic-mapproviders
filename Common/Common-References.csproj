@@ -177,12 +177,18 @@ set stPlgFile=$(ProjectDir)$(ProjectName)-1.5.x.st$(StPluginVersion)plugin
 REM To move a .stplugin to common area, create environment variable (or set it below)
 REM set stPlgoutdir=g:\Users\go\dev\web
 
-set APPDATA=%25ALLUSERSPROFILE%25
-IF EXIST "%25APPDATA%25\Application Data" set APPDATA=%25ALLUSERSPROFILE%25\Application Data
-set StTarget="%25APPDATA%25\$(StPluginPath)\Update\%25guid%25\$(ProjectName)"
+REM Vista+ / XP compatibility. More to handle?
+set C_APPDATA=%25PROGRAMDATA%25
+IF "%25C_APPDATA%25"=="" set C_APPDATA=%25ALLUSERSPROFILE%25\Application Data
+echo "%25C_APPDATA%25"
+IF EXIST "%25C_APPDATA%25" GOTO COPY_REL
+GOTO END_COPY_REL
+:COPY_REL
+set StTarget="%25C_APPDATA%25\$(StPluginPath)\Update\%25guid%25\$(ProjectName)"
 IF NOT EXIST %25StTarget%25 mkdir %25StTarget%25
 REM XCOPY depreciated in Vista, use for XP compatibility
 XCOPY  "$(TargetDir)*.*" %25StTarget%25 /I/Y/Q/E &lt;NUL:
+:END_COPY_REL
 
 set Release=No
 IF "$(ConfigurationName)"=="ST2.1Release" set Release=Yes
