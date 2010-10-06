@@ -307,17 +307,21 @@ namespace Lofas.SportsTracks.Hitta_SE_MapProvider
 #if ST_2_1
                             listener.NotifyMapImageReady(obj);
 #else
-                            double latN, latS, longW, longE, latN2, latS2, longW2, longE2;
-
-                            //Get max WGS84 coordinates
-                            //As only valid tiles should be requested, there is no check that the coords are in bounds
-                            Hitta_SE_MapProjection.RT90ToWGS84(cx, cy, out latN, out longW);
-                            Hitta_SE_MapProjection.RT90ToWGS84(iRx / 10, iRy / 10, out latS, out longE);
-                            Hitta_SE_MapProjection.RT90ToWGS84(cx, iRy / 10, out latN2, out longE2);
-                            Hitta_SE_MapProjection.RT90ToWGS84(iRx / 10, cy, out latS2, out longW2);
+                            double latN, latS, longW, longE;
+                            double useScale;
+                            double tileMeterPerPixel;
+                            Hitta_SE_MapProjection.getMetersPerPixel(useZoomLevel, out tileMeterPerPixel, out useScale);
+                            // Get offset in meters from the center position.
+                            double tileXOffsetFromCenter = 2 * tileX2 * tileMeterPerPixel;
+                            double tileYOffsetFromCenter = 2 * tileY2 * tileMeterPerPixel;
+                            // Find out upper left and bottom right corner of the tile.
+                            Hitta_SE_MapProjection.RT90ToWGS84(cx - tileXOffsetFromCenter, cy + tileYOffsetFromCenter, out latN, out longW);
+                            Hitta_SE_MapProjection.RT90ToWGS84(cx + tileXOffsetFromCenter, cy - tileYOffsetFromCenter, out latS, out longE);
+                            // Invalidate region
                             listener.InvalidateRegion(new GPSBounds(
-                                new GPSLocation((float)Math.Max(latN, latN2), (float)Math.Min(longW, longW2)), 
-                                new GPSLocation((float)Math.Min(latS, latS2), (float)Math.Max(longE, longE2))));
+                                                            new GPSLocation((float)(latN), (float)(longW)),
+                                                            new GPSLocation((float)(latS), (float)(longE))));                  
+
 #endif
                         }
                         catch (Exception)
