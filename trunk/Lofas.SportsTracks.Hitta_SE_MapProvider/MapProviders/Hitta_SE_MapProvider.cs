@@ -114,8 +114,103 @@ namespace Lofas.SportsTracks.Hitta_SE_MapProvider
             return numQueued;
         }
 
-
         private int DrawTiles(IMapImageReadyListener listener, System.Drawing.Graphics graphics, ref System.Drawing.Rectangle drawRectangle, double zoomLevel, double x, double y)
+        {
+            int numQueued = 0;
+            foreach (TileInfo t in getTileInfo(drawRectangle, zoomLevel, x, y))
+            {
+                if (isCached(t.iRx, t.iRy, t.useScale))
+                {
+                    Image img = getImageFromCache(t.iRx, t.iRy, t.useScale);
+                    float ix = (float)(drawRectangle.X + t.col * t.tileDrawWidth + t.drawTileDX + t.offX);
+                    float iy = (float)(drawRectangle.Y + t.row * t.tileDrawWidth + t.drawTileDY + t.offY);
+                    float iw = (float)(drawRectangle.X + (t.col + 1) * t.tileDrawWidth + t.drawTileDX) - (float)(drawRectangle.X + (t.col) * t.tileDrawWidth + t.drawTileDX);
+                    float ih = (float)(drawRectangle.Y + (t.row + 1) * t.tileDrawWidth + t.drawTileDY) - (float)(drawRectangle.Y + t.row * t.tileDrawWidth + t.drawTileDY);
+                    graphics.DrawImage(img, (int)Math.Floor(ix), (int)Math.Floor(iy), (int)Math.Ceiling(iw), (int)Math.Ceiling(ih));
+                    img.Dispose();
+
+                }
+                else
+                {
+                    queueDownload(t.rx, t.ry, t.iRx, t.iRy, t.useScale, listener);
+                    numQueued++;
+                }
+            }
+            return numQueued;
+        }
+
+        STWebClient wc = new STWebClient();
+        private void queueDownload(double cx, double cy, int iRx, int iRy, double useZoomLevel, IMapImageReadyListener listener)
+        {
+            string item = iRx + "_" + iRy + "_" + useZoomLevel.ToString();
+            if (!m_DownloadQueueItems.ContainsKey(item))
+            {
+                m_DownloadQueueItems.Add(item, "");
+                ThreadPool.QueueUserWorkItem(new WaitCallback(delegate(object o)
+                {
+                    try
+                    {
+                        lock (wc)
+                        {
+                            if (m_DownloadQueueItems.ContainsKey(item))
+                            {
+
+#if nontile
+                                    string url = "http://map.hitta.se/SpatialAceWMS/RWCInterface.axd?view=Hitta.MainView&format=" + m_ImageExt + "&transparent=false&layers=MainView/" + m_View + "Layer&width=256&height=256&scale=" + useZoomLevel + "&x=" + cx.ToString(CultureInfo.InvariantCulture) + "&y=" + cy.ToString(CultureInfo.InvariantCulture);
+#else
+                                int bottomLeftX = 451424;
+                                int bottomLeftY = 5651424;
+                                double resolution = Hitta_SE_MapProjection.getResolution(useZoomLevel);
+                                //int column = (int)Math.Round(((cx  - bottomLeftX + ((2*tileX2 / 2) *resolution))) / (2*tileX2 * resolution), 0);
+                                //int row = (int)Math.Round(((cy - bottomLeftY + ((2*tileY2 / 2) * resolution))) / (2*tileY2 * resolution), 0);
+
+                                int column = (int)(((cx - bottomLeftX)) / (2 * tileX2 * resolution));
+                                int row = (int)(((cy - bottomLeftY)) / (2 * tileY2 * resolution));
+                                string geoCenterString = row + "/" + column;
+                                string url = m_BaseUrl + resolution.ToString(CultureInfo.InvariantCulture) + "/" + geoCenterString;
+#endif
+
+                                Image img = Image.FromStream(wc.OpenRead(url));
+                                img.Save(getFilePath(iRx, iRy, useZoomLevel, true));
+                                img.Dispose();
+                            }
+                        }
+                        MapImageObj obj = new MapImageObj();
+                        obj.cx = cx;
+                        obj.cy = cy;
+                        obj.Scale = useZoomLevel;
+#if ST_2_1
+                            listener.NotifyMapImageReady(obj);
+#else
+                        double latN, latS, longW, longE;
+                        double useScale;
+                        double tileMeterPerPixel;
+                        Hitta_SE_MapProjection.getMetersPerPixel(useZoomLevel, out tileMeterPerPixel, out useScale);
+                        // Get offset in meters from the center position.
+                        double tileXOffsetFromCenter = 2 * tileX2 * tileMeterPerPixel;
+                        double tileYOffsetFromCenter = 2 * tileY2 * tileMeterPerPixel;
+                        // Find out upper left and bottom right corner of the tile.
+                        Hitta_SE_MapProjection.RT90ToWGS84(cx - tileXOffsetFromCenter, cy + tileYOffsetFromCenter, out latN, out longW);
+                        Hitta_SE_MapProjection.RT90ToWGS84(cx + tileXOffsetFromCenter, cy - tileYOffsetFromCenter, out latS, out longE);
+                        // Invalidate region
+                        listener.InvalidateRegion(new GPSBounds(
+                                                        new GPSLocation((float)(latN), (float)(longW)),
+                                                        new GPSLocation((float)(latS), (float)(longE))));
+
+#endif
+                    }
+                    catch (Exception)
+                    {
+                    }
+                    finally
+                    {
+                    }
+                    m_DownloadQueueItems.Remove(item);
+                }));
+            }
+        }
+
+        private IList<TileInfo> getTileInfo(System.Drawing.Rectangle drawRectangle, double zoomLevel, double x, double y)
         {
             double useScale;
             double tileMeterPerPixel;
@@ -217,8 +312,7 @@ namespace Lofas.SportsTracks.Hitta_SE_MapProvider
             double rx = startTileX;
 
             int col = 0;
-            int numQueued = 0;
-
+            IList<TileInfo> tiles = new List<TileInfo>();
             while (rx <= lrX)
             {
                 //int ry = (int)ulY;
@@ -228,23 +322,7 @@ namespace Lofas.SportsTracks.Hitta_SE_MapProvider
                 {
                     int iRx = (int)Math.Round((rx + tileMeterPerPixel * tileX2) * 10);
                     int iRy = (int)Math.Round((ry - tileMeterPerPixel * tileY2) * 10);
-
-                    if (isCached(iRx, iRy, useScale))
-                    {
-                        Image img = getImageFromCache(iRx, iRy, useScale);
-                        float ix = (float)(drawRectangle.X + col * tileDrawWidth + drawTileDX + offX);
-                        float iy = (float)(drawRectangle.Y + row * tileDrawWidth + drawTileDY + offY);
-                        float iw = (float)(drawRectangle.X + (col+1) * tileDrawWidth + drawTileDX) - (float)(drawRectangle.X + (col) * tileDrawWidth + drawTileDX);
-                        float ih = (float)(drawRectangle.Y + (row+1) * tileDrawWidth + drawTileDY) - (float)(drawRectangle.Y + row * tileDrawWidth + drawTileDY);
-                        graphics.DrawImage(img,(int)Math.Floor(ix) , (int)Math.Floor(iy), (int)Math.Ceiling(iw), (int)Math.Ceiling(ih));
-                        img.Dispose();
-
-                    }
-                    else
-                    {
-                        queueDownload(rx, ry, iRx, iRy, useScale, listener);
-                        numQueued++;
-                    }
+                    tiles.Add(new TileInfo(rx, ry, iRx, iRy, useScale, col, tileDrawWidth, drawTileDX, offX, row, drawTileDY, offY));
                     ry -= 2*tileY2 * tileMeterPerPixel;
                     row++;
                 }
@@ -253,86 +331,48 @@ namespace Lofas.SportsTracks.Hitta_SE_MapProvider
                 rx += 2*tileX2 * tileMeterPerPixel;
             }
 
-
-            return numQueued;
+            return tiles;
         }
-
+            
+        private class TileInfo
+        {
+                //more fields than needed, can be optimised
+            //This is remains of having DrawTiles and getTileInfo in the same routine
+            public TileInfo(double rx, double ry, int iRx, int iRy, double useScale,
+                int col, double tileDrawWidth, double drawTileDX, double offX, 
+                int row, double drawTileDY, double offY)
+            {
+                this.rx = rx;
+                this.ry = ry;
+                this.iRx = iRx;
+                this.iRy = iRy;
+                this.useScale = useScale;
+                this.col = col;
+                this.tileDrawWidth = tileDrawWidth;
+                this.drawTileDX = drawTileDX;
+                this.offX = offX;
+                this.row = row;
+                this.drawTileDY = drawTileDY;
+                this.offY = offY;
+            }
+            public double rx;
+            public double ry;
+            public int iRx;
+            public int iRy;
+            public double useScale;
+            public int  col;
+            public double tileDrawWidth;
+            public double drawTileDX;
+            public double offX;
+            public int row;
+            public double drawTileDY;
+            public double offY;
+        }
         private class MapImageObj
         {
             public double cx;
             public double cy;
             public double Scale;
-        }
-
-        STWebClient wc = new STWebClient();
-        private void queueDownload(double cx, double cy, int iRx, int iRy, double useZoomLevel, IMapImageReadyListener listener)
-        {
-            string item = iRx + "_" + iRy + "_" + useZoomLevel.ToString();
-            if (!m_DownloadQueueItems.ContainsKey(item))
-            {
-                m_DownloadQueueItems.Add(item,"");
-                ThreadPool.QueueUserWorkItem(new WaitCallback(delegate(object o)
-                    {
-                        try
-                        {
-                            lock (wc)
-                            {
-                                if (m_DownloadQueueItems.ContainsKey(item))
-                                {
-
-#if nontile
-                                    string url = "http://map.hitta.se/SpatialAceWMS/RWCInterface.axd?view=Hitta.MainView&format=" + m_ImageExt + "&transparent=false&layers=MainView/" + m_View + "Layer&width=256&height=256&scale=" + useZoomLevel + "&x=" + cx.ToString(CultureInfo.InvariantCulture) + "&y=" + cy.ToString(CultureInfo.InvariantCulture);
-#else
-                                    int bottomLeftX = 451424;
-                                    int bottomLeftY = 5651424;
-                                    double resolution = Hitta_SE_MapProjection.getResolution(useZoomLevel);
-                                    //int column = (int)Math.Round(((cx  - bottomLeftX + ((2*tileX2 / 2) *resolution))) / (2*tileX2 * resolution), 0);
-                                    //int row = (int)Math.Round(((cy - bottomLeftY + ((2*tileY2 / 2) * resolution))) / (2*tileY2 * resolution), 0);
-
-                                    int column = (int)(((cx - bottomLeftX)) / (2*tileX2 * resolution));
-                                    int row = (int)(((cy - bottomLeftY)) / (2*tileY2 * resolution));
-                                    string geoCenterString = row + "/" + column;
-                                    string url = m_BaseUrl + resolution.ToString(CultureInfo.InvariantCulture) + "/" + geoCenterString;
-#endif
-
-                                    Image img = Image.FromStream(wc.OpenRead(url));
-                                    img.Save(getFilePath(iRx, iRy, useZoomLevel, true));
-                                    img.Dispose();
-                                }
-                            }
-                            MapImageObj obj = new MapImageObj();
-                            obj.cx = cx;
-                            obj.cy = cy;
-                            obj.Scale = useZoomLevel;
-#if ST_2_1
-                            listener.NotifyMapImageReady(obj);
-#else
-                            double latN, latS, longW, longE;
-                            double useScale;
-                            double tileMeterPerPixel;
-                            Hitta_SE_MapProjection.getMetersPerPixel(useZoomLevel, out tileMeterPerPixel, out useScale);
-                            // Get offset in meters from the center position.
-                            double tileXOffsetFromCenter = 2 * tileX2 * tileMeterPerPixel;
-                            double tileYOffsetFromCenter = 2 * tileY2 * tileMeterPerPixel;
-                            // Find out upper left and bottom right corner of the tile.
-                            Hitta_SE_MapProjection.RT90ToWGS84(cx - tileXOffsetFromCenter, cy + tileYOffsetFromCenter, out latN, out longW);
-                            Hitta_SE_MapProjection.RT90ToWGS84(cx + tileXOffsetFromCenter, cy - tileYOffsetFromCenter, out latS, out longE);
-                            // Invalidate region
-                            listener.InvalidateRegion(new GPSBounds(
-                                                            new GPSLocation((float)(latN), (float)(longW)),
-                                                            new GPSLocation((float)(latS), (float)(longE))));                  
-
-#endif
-                        }
-                        catch (Exception)
-                        {
-                        }
-                        finally
-                        {
-                        }
-                        m_DownloadQueueItems.Remove(item);
-                    }));
-            }
         }
 
         private string getFilePath(int iRx, int iRy, double useZoomLevel, bool createDir)
@@ -405,7 +445,27 @@ namespace Lofas.SportsTracks.Hitta_SE_MapProvider
 
         public void Refresh(System.Drawing.Rectangle drawRectangle, ZoneFiveSoftware.Common.Data.GPS.IGPSLocation center, double zoomLevel)
         {
-            //TODO: Delete cached tiles
+            double x, y;
+
+            if (0 < Hitta_SE_MapProjection.isValidPoint(center))
+            {
+                Hitta_SE_MapProjection.WGS84ToRT90(center, out x, out y);
+                foreach (TileInfo t in getTileInfo(drawRectangle, zoomLevel, x, y))
+                {
+                    if (isCached(t.iRx, t.iRy, t.useScale))
+                    {
+                        string str = getFilePath(t.iRx, t.iRy, t.useScale);
+
+                        try
+                        {
+                            File.Delete(str);
+                        }
+                        catch (Exception)
+                        {
+                        }
+                    }
+                }
+            }
         }
 
     #endregion
