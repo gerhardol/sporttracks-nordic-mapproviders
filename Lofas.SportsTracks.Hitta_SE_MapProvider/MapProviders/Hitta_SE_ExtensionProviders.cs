@@ -66,13 +66,14 @@ namespace Lofas.SportsTracks.Hitta_SE_MapProvider
                     //m_List.Add(new Eniro_SE_MapProvider("Nat"));
                     //m_List.Add(new Eniro_SE_MapProvider("Map","FI_fi"));
                     //Only enable Eniro if tiles exits
-                    foreach(string s in new string[]{"Sat", "Map", "Nat"})
-                {
-                    Eniro_SE_MapProvider e = new Eniro_SE_MapProvider(s);
-                    if(e.Enabled){
-                        m_List.Add(e);
+                    foreach (string s in new string[] { "Sat", "Map", "Nat" })
+                    {
+                        Eniro_SE_MapProvider e = new Eniro_SE_MapProvider(s);
+                        if (e.Enabled)
+                        {
+                            m_List.Add(e);
+                        }
                     }
-                }
                 }
                 return m_List; 
             }
