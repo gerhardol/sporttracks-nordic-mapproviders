@@ -3,8 +3,6 @@ Microsoft Visual Studio Solution File, Format Version 10.00
 # Visual Studio 2008
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Lofas.SportsTracks.Hitta_SE_MapProvider", "Lofas.SportsTracks.Hitta_SE_MapProvider\Lofas.SportsTracks.Hitta_SE_MapProvider.csproj", "{029C4C45-BA8E-4BB4-828D-34717ACE9DBA}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ProjectionTestApp", "ProjectoinTestApp\ProjectionTestApp.csproj", "{5B9573E3-9851-4E84-804F-8C9765B42FE5}"
-EndProject
 Global
 	GlobalSection(SubversionScc) = preSolution
 		Svn-Managed = True
@@ -19,10 +17,6 @@ Global
 		{029C4C45-BA8E-4BB4-828D-34717ACE9DBA}.Debug|Any CPU.Build.0 = ST3.0Debug|Any CPU
 		{029C4C45-BA8E-4BB4-828D-34717ACE9DBA}.Release|Any CPU.ActiveCfg = ST3.0Release|Any CPU
 		{029C4C45-BA8E-4BB4-828D-34717ACE9DBA}.Release|Any CPU.Build.0 = ST3.0Release|Any CPU
-		{5B9573E3-9851-4E84-804F-8C9765B42FE5}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{5B9573E3-9851-4E84-804F-8C9765B42FE5}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{5B9573E3-9851-4E84-804F-8C9765B42FE5}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{5B9573E3-9851-4E84-804F-8C9765B42FE5}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
