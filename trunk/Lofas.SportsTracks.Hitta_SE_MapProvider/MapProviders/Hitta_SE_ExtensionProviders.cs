@@ -61,6 +61,7 @@ namespace Lofas.SportsTracks.Hitta_SE_MapProvider
                     m_List = new List<IMapTileProvider>();
                     m_List.Add(new EniroMapProvider("map"));
                     m_List.Add(new EniroMapProvider("aerial"));
+                    m_List.Add(new EniroMapProvider("nautical"));
                     m_List.Add(new Hitta_SE_MapProvider("Sat"));
                     m_List.Add(new Hitta_SE_MapProvider("Map"));
                     //m_List.Add(new Eniro_SE_MapProvider("Sat"));

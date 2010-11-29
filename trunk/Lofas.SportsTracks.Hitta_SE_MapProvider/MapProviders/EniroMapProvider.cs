@@ -23,19 +23,32 @@ namespace Lofas.SportsTracks.Hitta_SE_MapProvider
 
         public EniroMapProvider(string viewType)
         {
-            if (viewType == "map")
+            switch (viewType)
             {
-                m_ImageExt = ".png";
-                m_GUID = new Guid("3E9661F9-8704-4868-9700-A668DF4C2C75");
-                m_Name = "Eniro - Karta";
-                m_ViewTypeInUrl = "map";
-            }
-            else
-            {
-                m_ImageExt = ".jpeg";
-                m_GUID = new Guid("6B07A2D9-8394-496F-A843-751529BB88D9");
-                m_Name = "Eniro - Flygfoto";
-                m_ViewTypeInUrl = "aerial";
+                case "map":
+                    {
+                        m_ImageExt = ".png";
+                        m_GUID = new Guid("3E9661F9-8704-4868-9700-A668DF4C2C75");
+                        m_Name = "Eniro - Karta";
+                        m_ViewTypeInUrl = "map";
+                        break;
+                    }
+                case "aerial":
+                    {
+                        m_ImageExt = ".jpeg";
+                        m_GUID = new Guid("6B07A2D9-8394-496F-A843-751529BB88D9");
+                        m_Name = "Eniro - Flygfoto";
+                        m_ViewTypeInUrl = "aerial";
+                        break;
+                    }
+                case "nautical":
+                    {
+                        m_ImageExt = ".png";
+                        m_GUID = new Guid("3E9661F9-8704-4868-9700-A668DF4C2C75");
+                        m_Name = "Eniro - Sjökort";
+                        m_ViewTypeInUrl = "nautical";
+                        break;
+                    }
             }
 
             m_CacheDirectory = Path.Combine(Plugin.m_Application.Configuration.CommonWebFilesFolder, GUIDs.PluginMain.ToString() + Path.DirectorySeparatorChar + "Eniro_" + m_ViewTypeInUrl);
@@ -152,6 +165,7 @@ namespace Lofas.SportsTracks.Hitta_SE_MapProvider
                                                                                   }
                                                                               }
 
+                                                                              // TODO: Fix the GPS Bounds of InvalidateRegion
                                                                               // Invalidate region
                                                                               listener.InvalidateRegion(new GPSBounds(
                                                                                                             new GPSLocation((float)(61), (float)(16)),
