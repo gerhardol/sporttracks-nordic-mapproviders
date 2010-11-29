@@ -44,7 +44,7 @@ namespace Lofas.SportsTracks.Hitta_SE_MapProvider
                 case "nautical":
                     {
                         m_ImageExt = ".png";
-                        m_GUID = new Guid("3E9661F9-8704-4868-9700-A668DF4C2C75");
+                        m_GUID = new Guid("C7588CC1-AF51-497D-A6B8-AE18B9F600FD");
                         m_Name = "Eniro - Sjökort";
                         m_ViewTypeInUrl = "nautical";
                         break;
@@ -133,12 +133,11 @@ namespace Lofas.SportsTracks.Hitta_SE_MapProvider
 
         }
 
-        STWebClient wc = new STWebClient();
-
         private void queueDownload(long tileXToBeDrawn, long tileYToBeDrawn, double zoom, IMapImageReadyListener listener)
         {
             try
             {
+                STWebClient wc = new STWebClient();
                 string item = zoom + "/" + tileXToBeDrawn + "/" + tileYToBeDrawn;
             
                 if (!m_DownloadQueueItems.ContainsKey(item))
@@ -152,10 +151,10 @@ namespace Lofas.SportsTracks.Hitta_SE_MapProvider
                                                                               {
                                                                                   if (m_DownloadQueueItems.ContainsKey(item))
                                                                                   {
-                                                                                      // TODO: Möjligen kan vi istället för att hårt skriva nedanstående url
-                                                                                      // TODO: Växla mellan http://map01.eniro.com...- http://map04.eniro.com
+                                                                                      // Eniro seems to randomly point against one of four different servers. 
+                                                                                      // Therefore I do the same and vary between an url of map01..., map02..., map03... and map04...
                                                                                       Random rnd = new Random();
-                                                                                      int serverIndex = rnd.Next(1, 4);
+                                                                                      int serverIndex = rnd.Next(1, 5);
                                                                                       string baseUrl = string.Format("http://map0{0}.eniro.com/geowebcache/service/tms1.0.0/", serverIndex);
                                                                                       string url = baseUrl + m_ViewTypeInUrl + "/" + item + m_ImageExt;
 
