@@ -15,15 +15,30 @@ namespace Lofas.SportsTracks.Hitta_SE_MapProvider
         private Dictionary<string, string> m_DownloadQueueItems;
         private readonly string m_Name;
         private readonly Guid m_GUID;
+        private readonly string m_ImageExt;
+        private readonly string m_ViewTypeInUrl;
         private readonly EniroMapProjection m_Proj = new EniroMapProjection();        
         private readonly string m_CacheDirectory;
-        private const int ENIRO_MAX_ZOOMLEVEL = 20;        
-        public EniroMapProvider()
-        {
-            m_Name = "Eniro - Karta";
-            m_GUID = new Guid("3E9661F9-8704-4868-9700-A668DF4C2C75");
+        private const int ENIRO_MAX_ZOOMLEVEL = 20;               
 
-            m_CacheDirectory = Path.Combine(Plugin.m_Application.Configuration.CommonWebFilesFolder, GUIDs.PluginMain.ToString() + Path.DirectorySeparatorChar + "Eniro_Lab");
+        public EniroMapProvider(string viewType)
+        {
+            if (viewType == "map")
+            {
+                m_ImageExt = ".png";
+                m_GUID = new Guid("3E9661F9-8704-4868-9700-A668DF4C2C75");
+                m_Name = "Eniro - Karta";
+                m_ViewTypeInUrl = "map";
+            }
+            else
+            {
+                m_ImageExt = ".jpeg";
+                m_GUID = new Guid("6B07A2D9-8394-496F-A843-751529BB88D9");
+                m_Name = "Eniro - Flygfoto";
+                m_ViewTypeInUrl = "aerial";
+            }
+
+            m_CacheDirectory = Path.Combine(Plugin.m_Application.Configuration.CommonWebFilesFolder, GUIDs.PluginMain.ToString() + Path.DirectorySeparatorChar + "Eniro_" + m_ViewTypeInUrl);
             m_DownloadQueueItems = new Dictionary<string, string>();     
         }
 
@@ -126,7 +141,10 @@ namespace Lofas.SportsTracks.Hitta_SE_MapProvider
                                                                                   {
                                                                                       // TODO: Möjligen kan vi istället för att hårt skriva nedanstående url
                                                                                       // TODO: Växla mellan http://map01.eniro.com...- http://map04.eniro.com
-                                                                                      string url = "http://map02.eniro.com/geowebcache/service/tms1.0.0/map/" + item + ".png";
+                                                                                      Random rnd = new Random();
+                                                                                      int serverIndex = rnd.Next(1, 4);
+                                                                                      string baseUrl = string.Format("http://map0{0}.eniro.com/geowebcache/service/tms1.0.0/", serverIndex);
+                                                                                      string url = baseUrl + m_ViewTypeInUrl + "/" + item + m_ImageExt;
 
                                                                                       Image img = Image.FromStream(wc.OpenRead(url));
                                                                                       img.Save(getFilePath(tileXToBeDrawn, tileYToBeDrawn, zoom, true));
@@ -174,7 +192,7 @@ namespace Lofas.SportsTracks.Hitta_SE_MapProvider
             string downloadDir = Path.Combine(m_CacheDirectory, useZoomLevel.ToString());
             if (createDir && !Directory.Exists(downloadDir))
                 Directory.CreateDirectory(downloadDir);
-            return Path.Combine(downloadDir, iRx + "_" + iRy + ".png");
+            return Path.Combine(downloadDir, iRx + "_" + iRy + m_ImageExt);
         }
 
         private string getFilePath(long iRx, long iRy, double useZoomLevel)

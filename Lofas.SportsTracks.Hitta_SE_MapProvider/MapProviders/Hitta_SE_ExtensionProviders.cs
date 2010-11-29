@@ -59,6 +59,8 @@ namespace Lofas.SportsTracks.Hitta_SE_MapProvider
                 if (null == m_List)
                 {
                     m_List = new List<IMapTileProvider>();
+                    m_List.Add(new EniroMapProvider("map"));
+                    m_List.Add(new EniroMapProvider("aerial"));
                     m_List.Add(new Hitta_SE_MapProvider("Sat"));
                     m_List.Add(new Hitta_SE_MapProvider("Map"));
                     //m_List.Add(new Eniro_SE_MapProvider("Sat"));
@@ -66,14 +68,14 @@ namespace Lofas.SportsTracks.Hitta_SE_MapProvider
                     //m_List.Add(new Eniro_SE_MapProvider("Nat"));
                     //m_List.Add(new Eniro_SE_MapProvider("Map","FI_fi"));
                     //Only enable Eniro if tiles exits
-                    foreach (string s in new string[] { "Sat", "Map", "Nat" })
-                    {
-                        Eniro_SE_MapProvider e = new Eniro_SE_MapProvider(s);
-                        if (e.Enabled)
-                        {
-                            m_List.Add(e);
-                        }
-                    }
+//                    foreach (string s in new string[] { "Sat", "Map", "Nat" })
+//                    {
+//                        Eniro_SE_MapProvider e = new Eniro_SE_MapProvider(s);
+//                        if (e.Enabled)
+//                        {
+//                            m_List.Add(e);
+//                        }
+//                    }
                 }
                 return m_List; 
             }
