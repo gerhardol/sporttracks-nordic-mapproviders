@@ -19,15 +19,15 @@
     <Compile Include="Common\STWebClient.cs">
       <SubType>Component</SubType>
     </Compile>
-    <Compile Include="MapProviders\EniroMapProjection.cs" />
-    <Compile Include="MapProviders\EniroMapProvider.cs" />
-    <Compile Include="MapProviders\Eniro_SE_MapProjection.cs" />
-    <Compile Include="MapProviders\Hitta_SE_MapProjection.cs" />
+    <Compile Include="MapProviders\Eniro\EniroMapProjection.cs" />
+    <Compile Include="MapProviders\Eniro\EniroMapProvider.cs" />
+    <Compile Include="MapProviders\Deprecated\Eniro_SE_MapProjection.cs" />
+    <Compile Include="MapProviders\Hitta\Hitta_SE_MapProjection.cs" />
     <Compile Include="MapProviders\Lofas.Projection.CFProjection.cs" />
-    <Compile Include="MapProviders\Eniro_SE_MapProvider.cs" />
+    <Compile Include="MapProviders\Deprecated\Eniro_SE_MapProvider.cs" />
     <Content Include="MapProviders\EvalJScript.cs" />
     <Compile Include="MapProviders\Hitta_SE_ExtensionProviders.cs" />
-    <Compile Include="MapProviders\Hitta_SE_MapProvider.cs" />
+    <Compile Include="MapProviders\Hitta\Hitta_SE_MapProvider.cs" />
     <Compile Include="Plugin.cs" />
     <Compile Include="GUIDs.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
