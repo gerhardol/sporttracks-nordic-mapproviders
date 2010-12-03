@@ -20,12 +20,14 @@ using ZoneFiveSoftware.Common.Visuals.Fitness;
 
 namespace Lofas.SportsTracks.Hitta_SE_MapProvider
 {
-    public class STWebClient : WebClient
+    public sealed class STWebClient : WebClient
     {
+        private static readonly STWebClient instance = new STWebClient();
+
         /// <summary>
         /// STWebClient extends the WebClient class so that it can take advantage of the Sport Tracks Proxy settings.
         /// </summary>
-        public STWebClient()
+        private STWebClient()
         {
             if (InternetSettings.UseProxy)
             {
@@ -43,6 +45,11 @@ namespace Lofas.SportsTracks.Hitta_SE_MapProvider
 
                 Proxy = proxy;
             }
+        }
+
+        public static STWebClient Instance
+        {
+            get { return instance; }
         }
 
         /// <summary>

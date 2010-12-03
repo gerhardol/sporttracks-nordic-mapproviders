@@ -23,22 +23,24 @@ using System.Threading;
 using ZoneFiveSoftware.Common.Data.GPS;
 using ZoneFiveSoftware.Common.Visuals.Mapping;
 
-namespace Lofas.SportsTracks.Hitta_SE_MapProvider    
+namespace Lofas.SportsTracks.Hitta_SE_MapProvider
 {
     public class EniroMapProvider : IMapTileProvider
     {
         #region Private members
 
-        private readonly Dictionary<string, string> m_DownloadQueueItems;
-        private readonly string m_Name;
-        private readonly Guid m_GUID;
-        private readonly string m_ImageExtension;
-        private readonly string m_ViewTypeInUrl;
-        private readonly EniroMapProjection m_MapProjection = new EniroMapProjection(); // The projection to use within the EniroMapProvider   
-        private readonly string m_CacheDirectory; // Directory where to store the cached tiles
-        
         private const int ENIRO_MAX_ZOOMLEVEL = 20;
         private const int TILE_SIZE = 256;
+        private readonly string m_CacheDirectory; // Directory where to store the cached tiles
+        private readonly Dictionary<string, string> m_DownloadQueueItems;
+        private readonly Guid m_GUID;
+        private readonly string m_ImageExtension;
+
+        private readonly EniroMapProjection m_MapProjection = new EniroMapProjection();
+                                            // The projection to use within the EniroMapProvider   
+
+        private readonly string m_Name;
+        private readonly string m_ViewTypeInUrl;
 
         #endregion
 
@@ -51,7 +53,7 @@ namespace Lofas.SportsTracks.Hitta_SE_MapProvider
         {
             switch (mapViewType)
             {
-                case "map" :
+                case "map":
                     {
                         m_ImageExtension = ".png";
                         m_GUID = new Guid("3E9661F9-8704-4868-9700-A668DF4C2C75");
@@ -77,8 +79,10 @@ namespace Lofas.SportsTracks.Hitta_SE_MapProvider
                     }
             }
 
-            m_CacheDirectory = Path.Combine(Plugin.m_Application.Configuration.CommonWebFilesFolder, GUIDs.PluginMain.ToString() + Path.DirectorySeparatorChar + "Eniro_" + m_ViewTypeInUrl);
-            m_DownloadQueueItems = new Dictionary<string, string>();     
+            m_CacheDirectory = Path.Combine(Plugin.m_Application.Configuration.CommonWebFilesFolder,
+                                            GUIDs.PluginMain.ToString() + Path.DirectorySeparatorChar + "Eniro_" +
+                                            m_ViewTypeInUrl);
+            m_DownloadQueueItems = new Dictionary<string, string>();
         }
 
         #region IMapTileProvider Members
@@ -101,7 +105,8 @@ namespace Lofas.SportsTracks.Hitta_SE_MapProvider
         /// <param name="center"></param>
         /// <param name="zoom"></param>
         /// <returns></returns>
-        public int DrawMap(IMapImageReadyListener readyListener, Graphics graphics, Rectangle drawRect, Rectangle clipRect, IGPSLocation center, double zoom)
+        public int DrawMap(IMapImageReadyListener readyListener, Graphics graphics, Rectangle drawRect,
+                           Rectangle clipRect, IGPSLocation center, double zoom)
         {
             // Convert the zoom level to match the zoom-levels of Eniro.
             double eniroZoomlevel = ENIRO_MAX_ZOOMLEVEL - zoom;
@@ -113,29 +118,35 @@ namespace Lofas.SportsTracks.Hitta_SE_MapProvider
                 long yTileOfCenter = m_MapProjection.YTile(center.LatitudeDegrees, eniroZoomlevel);
                 long xPixelOfCenter = m_MapProjection.Xpixel(center.LongitudeDegrees, eniroZoomlevel);
                 long yPixelOfCenter = m_MapProjection.Ypixel(center.LatitudeDegrees, eniroZoomlevel);
-                long xPixelOfNWCornerCenterTile = m_MapProjection.Pixel_NW_OfTile(xTileOfCenter);
-                long yPixelOfNWCornerCenterTile = m_MapProjection.Pixel_NW_OfTile(yTileOfCenter);
+                long xPixelOfNWCornerCenterTile = m_MapProjection.PixelOfNorthWestCornerOfTile(xTileOfCenter);
+                long yPixelOfNWCornerCenterTile = m_MapProjection.PixelOfNorthWestCornerOfTile(yTileOfCenter);
 
                 long xPixelOffsetCenterVsNWCornerOfCenterTile = xPixelOfCenter - xPixelOfNWCornerCenterTile;
                 long yPixelOffsetCenterVsNWCornerOfCenterTile = yPixelOfCenter - yPixelOfNWCornerCenterTile;
 
-                long xPixelsFromLeftEdgeOfDrawingAreaToLeftEdgeOfCenterTile = (drawRect.Width/2) - xPixelOffsetCenterVsNWCornerOfCenterTile;
-                long yPixelsFromTopEdgeOfDrawingAreaToTopEdgeOfCenterTile = (drawRect.Height/2) - yPixelOffsetCenterVsNWCornerOfCenterTile;
+                long xPixelsFromLeftEdgeOfDrawingAreaToLeftEdgeOfCenterTile = (drawRect.Width/2) -
+                                                                              xPixelOffsetCenterVsNWCornerOfCenterTile;
+                long yPixelsFromTopEdgeOfDrawingAreaToTopEdgeOfCenterTile = (drawRect.Height/2) -
+                                                                            yPixelOffsetCenterVsNWCornerOfCenterTile;
 
-                int noOfTilesToBeDrawnToTheLeftOfCenterTile = (int) Math.Ceiling((double) xPixelsFromLeftEdgeOfDrawingAreaToLeftEdgeOfCenterTile/TILE_SIZE);
-                int noOfTilesToBeDrawnAboveOfCenterTile = (int) Math.Ceiling((double) yPixelsFromTopEdgeOfDrawingAreaToTopEdgeOfCenterTile/TILE_SIZE);
+                int noOfTilesToBeDrawnToTheLeftOfCenterTile =
+                    (int) Math.Ceiling((double) xPixelsFromLeftEdgeOfDrawingAreaToLeftEdgeOfCenterTile/TILE_SIZE);
+                int noOfTilesToBeDrawnAboveOfCenterTile =
+                    (int) Math.Ceiling((double) yPixelsFromTopEdgeOfDrawingAreaToTopEdgeOfCenterTile/TILE_SIZE);
 
-                long xNWStartPixel = xPixelsFromLeftEdgeOfDrawingAreaToLeftEdgeOfCenterTile - (TILE_SIZE * noOfTilesToBeDrawnToTheLeftOfCenterTile);
-                long yNWStartPixel = yPixelsFromTopEdgeOfDrawingAreaToTopEdgeOfCenterTile - (TILE_SIZE * noOfTilesToBeDrawnAboveOfCenterTile);                
+                long xNWStartPixel = xPixelsFromLeftEdgeOfDrawingAreaToLeftEdgeOfCenterTile -
+                                     (TILE_SIZE*noOfTilesToBeDrawnToTheLeftOfCenterTile);
+                long yNWStartPixel = yPixelsFromTopEdgeOfDrawingAreaToTopEdgeOfCenterTile -
+                                     (TILE_SIZE*noOfTilesToBeDrawnAboveOfCenterTile);
 
                 int noOfTilesToBeDrawnHorizontally = (int) Math.Ceiling((double) drawRect.Width/TILE_SIZE + 1);
                 int noOfTilesToBeDrawnVertically = (int) Math.Ceiling((double) drawRect.Height/TILE_SIZE + 1);
                 long startXTile = xTileOfCenter - noOfTilesToBeDrawnToTheLeftOfCenterTile;
                 long startYTile = yTileOfCenter - noOfTilesToBeDrawnAboveOfCenterTile;
-                
-                Point northWestPoint = new Point((int)xNWStartPixel-TILE_SIZE, (int)yNWStartPixel-TILE_SIZE);
-                Point southEastPoint = new Point((int)xNWStartPixel + ((noOfTilesToBeDrawnHorizontally + 1) * TILE_SIZE), (int)yNWStartPixel + ((noOfTilesToBeDrawnVertically + 1) * TILE_SIZE));
 
+                // Calculation to find out which region to be invalidated
+                Point northWestPoint = new Point(-drawRect.Width/2, -drawRect.Height/2);
+                Point southEastPoint = new Point(drawRect.Width/2, drawRect.Height/2);
                 IGPSLocation northWestLocation = m_MapProjection.PixelToGPS(center, zoom, northWestPoint);
                 IGPSLocation southEastLocation = m_MapProjection.PixelToGPS(center, zoom, southEastPoint);
                 GPSBounds regionToBeInvalidated = new GPSBounds(northWestLocation, southEastLocation);
@@ -148,7 +159,7 @@ namespace Lofas.SportsTracks.Hitta_SE_MapProvider
                     {
                         long tileXToBeDrawn = startXTile + x;
                         long tileYToBeDrawn = startYTile + y;
-                        long tileYToBeDrawnEniro = (long)Math.Pow(2, eniroZoomlevel) - 1 - tileYToBeDrawn;
+                        long tileYToBeDrawnEniro = (long) Math.Pow(2, eniroZoomlevel) - 1 - tileYToBeDrawn;
 
                         // Find out if the tile is cached on disk or needs to be downloaded from Eniro.
                         if (IsCached(tileXToBeDrawn, tileYToBeDrawnEniro, eniroZoomlevel))
@@ -161,7 +172,8 @@ namespace Lofas.SportsTracks.Hitta_SE_MapProvider
                         }
                         else
                         {
-                            QueueDownload(tileXToBeDrawn, tileYToBeDrawnEniro, eniroZoomlevel, regionToBeInvalidated, readyListener);
+                            QueueDownload(tileXToBeDrawn, tileYToBeDrawnEniro, eniroZoomlevel, regionToBeInvalidated,
+                                          readyListener);
                             numberOfTilesQueued++;
                         }
                     }
@@ -171,53 +183,123 @@ namespace Lofas.SportsTracks.Hitta_SE_MapProvider
         }
 
         /// <summary>
+        /// The GUID of the Map provider
+        /// </summary>
+        public Guid Id
+        {
+            get { return m_GUID; }
+        }
+
+        /// <summary>
+        /// The projection that is used for the EniroMapProvider
+        /// </summary>
+        public IMapProjection MapProjection
+        {
+            get { return m_MapProjection; }
+        }
+
+        /// <summary>
+        /// Maximum zoom level. The zoom level does not correspond to the zoom level of Eniro.
+        /// Maximum zoom level = not detailed
+        /// </summary>
+        public double MaximumZoom
+        {
+            get { return 10; }
+        }
+
+        /// <summary>
+        /// Minimum zoom level. The zoom level does not correspond to the zoom level of Eniro.
+        /// Minimum zoom level = detailed
+        /// </summary>
+        public double MinimumZoom
+        {
+            get { return 0; }
+        }
+
+        ///<summary>
+        /// The name displayed in selection lists, menus, etc.
+        ///</summary>
+        public string Name
+        {
+            get { return m_Name; }
+        }
+
+        ///<summary>
+        /// Refresh the map area by discarding any cached map images. After this call the control will be invalidated which will
+        /// cause the appropriate calls to be made to refetch any images from the server.
+        ///<param name="drawRectangle">The rectangle to draw the map at.</param>
+        ///<param name="center">The GPS location at the center of the drawRectangle (width/2,height/2).</param>
+        ///<param name="zoomLevel">The current zoom level.</param>
+        public void Refresh(Rectangle drawRectangle, IGPSLocation center, double zoomLevel)
+        {
+            //TODO: Delete cached tiles
+        }
+
+        ///<summary>
+        /// Is fractional zooming supported. If true, smoother zooming can be used, instead of a step size of 1, 0.25 is used.
+        ///</summary>
+        public bool SupportsFractionalZoom
+        {
+            get { return false; }
+        }
+
+        #endregion
+
+        /// <summary>
         /// This method downloads a tile and saves it to disk.
         /// </summary>
         /// <param name="tileXToBeDrawn"></param>
         /// <param name="tileYToBeDrawn"></param>
         /// <param name="zoom"></param>
+        /// <param name="regionToBeInvalidated"></param>
         /// <param name="listener"></param>
-        private void QueueDownload(long tileXToBeDrawn, long tileYToBeDrawn, double zoom, GPSBounds regionToBeInvalidated, IMapImageReadyListener listener)
+        private void QueueDownload(long tileXToBeDrawn, long tileYToBeDrawn, double zoom,
+                                   IGPSBounds regionToBeInvalidated, IMapImageReadyListener listener)
         {
-                STWebClient wc = new STWebClient();
-                string item = zoom + "/" + tileXToBeDrawn + "/" + tileYToBeDrawn;
-                
-                if (!m_DownloadQueueItems.ContainsKey(item))
-                {
-                    m_DownloadQueueItems.Add(item, "");
-                    ThreadPool.QueueUserWorkItem(new WaitCallback(delegate(object o)
-                                                                      {
-                                                                        try
-                                                                        {
-                                                                          lock (wc)
-                                                                          {
-                                                                              if (m_DownloadQueueItems.ContainsKey(item))
-                                                                              {
-                                                                                  // Eniro seems to randomly point against one of four different servers. 
-                                                                                  // Therefore I do the same and vary between an url of map01..., map02..., map03... and map04...
-                                                                                  Random rnd = new Random();
-                                                                                  int serverIndex = rnd.Next(1, 5);
-                                                                                  string baseUrl = string.Format("http://map0{0}.eniro.com/geowebcache/service/tms1.0.0/", serverIndex);
-                                                                                  string url = baseUrl + m_ViewTypeInUrl + "/" + item + m_ImageExtension;
+            string item = zoom + "/" + tileXToBeDrawn + "/" + tileYToBeDrawn;
 
-                                                                                  Image img = Image.FromStream(wc.OpenRead(url));
-                                                                                  img.Save(getFilePath(tileXToBeDrawn, tileYToBeDrawn, zoom, true));
-                                                                                  img.Dispose();
-                                                                              }
-                                                                          }
+            if (!m_DownloadQueueItems.ContainsKey(item))
+            {
+                m_DownloadQueueItems.Add(item, "");
+                ThreadPool.QueueUserWorkItem(delegate
+                                                 {
+                                                     try
+                                                     {
+                                                         lock (STWebClient.Instance)
+                                                         {
+                                                             if (m_DownloadQueueItems.ContainsKey(item))
+                                                             {
+                                                                 // Eniro seems to randomly point against one of four different servers. 
+                                                                 // Therefore I do the same and vary between an url of map01..., map02..., map03... and map04...
+                                                                 Random rnd = new Random();
+                                                                 int serverIndex = rnd.Next(1, 5);
+                                                                 string baseUrl =
+                                                                     string.Format(
+                                                                         "http://map0{0}.eniro.com/geowebcache/service/tms1.0.0/",
+                                                                         serverIndex);
+                                                                 string url = baseUrl + m_ViewTypeInUrl + "/" + item +
+                                                                              m_ImageExtension;
 
-                                                                          // TODO: Fix the GPS Bounds of InvalidateRegion. Looks like it doesn't work properly.
-                                                                          // Invalidate region
-                                                                          listener.InvalidateRegion(regionToBeInvalidated);
-                                                                        }
-                                                                        catch (Exception)
-                                                                        {
-                                                                        }
-                                                                          m_DownloadQueueItems.Remove(item);
-                                                                      }));
-                }
+                                                                 Image img =
+                                                                     Image.FromStream(
+                                                                         STWebClient.Instance.OpenRead(url));
+                                                                 img.Save(getFilePath(tileXToBeDrawn, tileYToBeDrawn,
+                                                                                      zoom, true));
+                                                                 img.Dispose();
+                                                             }
+                                                         }
+
+                                                         // Invalidate the region of the drawing area
+                                                         listener.InvalidateRegion(regionToBeInvalidated);
+                                                     }
+                                                     catch (Exception)
+                                                     {
+                                                     }
+                                                     m_DownloadQueueItems.Remove(item);
+                                                 });
+            }
         }
-        
+
         /// <summary>
         /// Opens an image using Image.FromStream
         /// </summary>
@@ -298,7 +380,7 @@ namespace Lofas.SportsTracks.Hitta_SE_MapProvider
                 return new Bitmap(TILE_SIZE, TILE_SIZE);
             }
         }
-        
+
         /// <summary>
         /// Removes the items from the download queue
         /// </summary>
@@ -306,68 +388,5 @@ namespace Lofas.SportsTracks.Hitta_SE_MapProvider
         {
             m_DownloadQueueItems.Clear();
         }
-
-        /// <summary>
-        /// The GUID of the Map provider
-        /// </summary>
-        public Guid Id
-        {
-            get { return m_GUID; }
-        }
-
-        /// <summary>
-        /// The projection that is used for the EniroMapProvider
-        /// </summary>
-        public IMapProjection MapProjection
-        {
-            get { return m_MapProjection; }
-        }
-
-        /// <summary>
-        /// Maximum zoom level. The zoom level does not correspond to the zoom level of Eniro.
-        /// Maximum zoom level = not detailed
-        /// </summary>
-        public double MaximumZoom
-        {
-            get { return 10; }
-        }
-
-        /// <summary>
-        /// Minimum zoom level. The zoom level does not correspond to the zoom level of Eniro.
-        /// Minimum zoom level = detailed
-        /// </summary>
-        public double MinimumZoom
-        {
-            get { return 0; }
-        }
-
-        ///<summary>
-        /// The name displayed in selection lists, menus, etc.
-        ///</summary>
-        public string Name
-        {
-            get { return m_Name; }
-        }
-
-        ///<summary>
-        /// Refresh the map area by discarding any cached map images. After this call the control will be invalidated which will
-        /// cause the appropriate calls to be made to refetch any images from the server.
-        ///<param name="drawRectangle">The rectangle to draw the map at.</param>
-        ///<param name="center">The GPS location at the center of the drawRectangle (width/2,height/2).</param>
-        ///<param name="zoomLevel">The current zoom level.</param>
-        public void Refresh(System.Drawing.Rectangle drawRectangle, ZoneFiveSoftware.Common.Data.GPS.IGPSLocation center, double zoomLevel)
-        {
-            //TODO: Delete cached tiles
-        }
-
-        ///<summary>
-        /// Is fractional zooming supported. If true, smoother zooming can be used, instead of a step size of 1, 0.25 is used.
-        ///</summary>
-        public bool SupportsFractionalZoom
-        {
-            get { return false; }
-        }
-
-        #endregion
     }
 }
