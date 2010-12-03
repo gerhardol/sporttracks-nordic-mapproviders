@@ -21,11 +21,20 @@ using System.Drawing;
 using System.IO;
 using System.Threading;
 using ZoneFiveSoftware.Common.Data.GPS;
+#if ST_2_1
+using ZoneFiveSoftware.Common.Visuals.Fitness.GPS;
+#else
 using ZoneFiveSoftware.Common.Visuals.Mapping;
+#endif
 
 namespace Lofas.SportsTracks.Hitta_SE_MapProvider
 {
-    public class EniroMapProvider : IMapTileProvider
+    public class EniroMapProvider :
+#if ST_2_1
+        ZoneFiveSoftware.Common.Visuals.Fitness.GPS.IMapProvider
+#else
+        ZoneFiveSoftware.Common.Visuals.Mapping.IMapTileProvider
+#endif
     {
         #region Private members
 
@@ -79,8 +88,13 @@ namespace Lofas.SportsTracks.Hitta_SE_MapProvider
                     }
             }
 
-            m_CacheDirectory = Path.Combine(Plugin.m_Application.Configuration.CommonWebFilesFolder,
-                                            GUIDs.PluginMain.ToString() + Path.DirectorySeparatorChar + "Eniro_" +
+            m_CacheDirectory = Path.Combine(
+#if ST_2_1
+                Plugin.m_Application.SystemPreferences.WebFilesFolder, "MapTiles" +
+#else
+                Plugin.m_Application.Configuration.CommonWebFilesFolder, GUIDs.PluginMain.ToString() + 
+#endif
+                 + Path.DirectorySeparatorChar + "Eniro_" +
                                             m_ViewTypeInUrl);
             m_DownloadQueueItems = new Dictionary<string, string>();
         }
@@ -290,7 +304,11 @@ namespace Lofas.SportsTracks.Hitta_SE_MapProvider
                                                          }
 
                                                          // Invalidate the region of the drawing area
+#if ST_2_1
+                                                         listener.NotifyMapImageReady(regionToBeInvalidated);
+#else
                                                          listener.InvalidateRegion(regionToBeInvalidated);
+#endif
                                                      }
                                                      catch (Exception)
                                                      {
@@ -388,5 +406,44 @@ namespace Lofas.SportsTracks.Hitta_SE_MapProvider
         {
             m_DownloadQueueItems.Clear();
         }
+#if ST_2_1
+        //A few methods differ ST2/ST3, the ST2 methods are separated
+        public System.Drawing.Rectangle MapImagePixelRect(object mapImage, System.Drawing.Rectangle drawRectangle, ZoneFiveSoftware.Common.Data.GPS.IGPSLocation center, double zoomLevel)
+        {
+            if (mapImage is GPSBounds)
+            {
+                return drawRectangle;
+            }
+            else
+            {
+                return Rectangle.Empty;
+            }
+        }
+
+        public double MaxZoomLevel
+        {
+            get { return MaximumZoom; }
+        }
+
+        public double MinZoomLevel
+        {
+            get { return MinimumZoom; }
+        }
+        public bool FractionalZoom
+        {
+            get { return SupportsFractionalZoom; }
+        }
+
+        #region IMapProjection Members
+        public System.Drawing.Point GPSToPixel(ZoneFiveSoftware.Common.Data.GPS.IGPSLocation origin, double zoomLevel, ZoneFiveSoftware.Common.Data.GPS.IGPSLocation gps)
+        {
+            return m_MapProjection.GPSToPixel(origin, zoomLevel, gps);
+        }
+        public ZoneFiveSoftware.Common.Data.GPS.IGPSLocation PixelToGPS(ZoneFiveSoftware.Common.Data.GPS.IGPSLocation origin, double zoomLevel, System.Drawing.Point pixel)
+        {
+            return m_MapProjection.PixelToGPS(origin, zoomLevel, pixel);
+        }
+        #endregion
+#endif
     }
 }

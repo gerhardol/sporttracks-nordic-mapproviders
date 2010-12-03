@@ -19,7 +19,11 @@ using System;
 using System.Diagnostics;
 using System.Drawing;
 using ZoneFiveSoftware.Common.Data.GPS;
+#if ST_2_1
+using ZoneFiveSoftware.Common.Visuals.Fitness.GPS;
+#else
 using ZoneFiveSoftware.Common.Visuals.Mapping;
+#endif
 
 namespace Lofas.SportsTracks.Hitta_SE_MapProvider
 {
