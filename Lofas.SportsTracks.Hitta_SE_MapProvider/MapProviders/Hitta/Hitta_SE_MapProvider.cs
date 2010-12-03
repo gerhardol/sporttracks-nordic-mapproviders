@@ -139,7 +139,6 @@ namespace Lofas.SportsTracks.Hitta_SE_MapProvider
             return numQueued;
         }
 
-        STWebClient wc = new STWebClient();
         private void queueDownload(double cx, double cy, int iRx, int iRy, double useZoomLevel, IMapImageReadyListener listener)
         {
             string item = iRx + "_" + iRy + "_" + useZoomLevel.ToString();
@@ -150,7 +149,7 @@ namespace Lofas.SportsTracks.Hitta_SE_MapProvider
                 {
                     try
                     {
-                        lock (wc)
+                        lock (STWebClient.Instance)
                         {
                             if (m_DownloadQueueItems.ContainsKey(item))
                             {
@@ -170,7 +169,7 @@ namespace Lofas.SportsTracks.Hitta_SE_MapProvider
                                 string url = m_BaseUrl + resolution.ToString(CultureInfo.InvariantCulture) + "/" + geoCenterString;
 #endif
 
-                                Image img = Image.FromStream(wc.OpenRead(url));
+                                Image img = Image.FromStream(STWebClient.Instance.OpenRead(url));
                                 img.Save(getFilePath(iRx, iRy, useZoomLevel, true));
                                 img.Dispose();
                             }

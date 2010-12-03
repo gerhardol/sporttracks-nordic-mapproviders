@@ -239,8 +239,7 @@ namespace Lofas.SportsTracks.Hitta_SE_MapProvider
             public double cy;
             public double Scale;
         }
-
-        STWebClient wc = new STWebClient();
+        
         Random rnd = new Random();
         private void queueDownload(double cx, double cy, int iRx, int iRy, double useZoomLevel, IMapImageReadyListener listener)
         {
@@ -252,15 +251,15 @@ namespace Lofas.SportsTracks.Hitta_SE_MapProvider
                     {
                         try
                         {
-                            lock (wc)
+                            lock (STWebClient.Instance)
                             {
                                 if (m_DownloadQueueItems.ContainsKey(item))
                                 {
                                     int src = rnd.Next(0,4);
 
                                     string url = string.Format(m_BaseUrl, src) + "_" + Eniro_SE_MapProjection.getZoomIndex(useZoomLevel) + "_" + Convert.ToInt32(useZoomLevel) + ".0_58.0_256_128_" + iRx + "_" + iRy;
-                                    wc.Headers.Add("User-Agent", "Mozilla/5.0 (Windows; U; Windows NT 5.1; sv-SE; rv:1.9.0.4) Gecko/2008102920 Firefox/3.0.4");
-                                    Image img = Image.FromStream(wc.OpenRead(url));
+                                    STWebClient.Instance.Headers.Add("User-Agent", "Mozilla/5.0 (Windows; U; Windows NT 5.1; sv-SE; rv:1.9.0.4) Gecko/2008102920 Firefox/3.0.4");
+                                    Image img = Image.FromStream(STWebClient.Instance.OpenRead(url));
 
                                     img.Save(getFilePath(iRx, iRy, useZoomLevel, true));
                                     img.Dispose();
@@ -273,10 +272,6 @@ namespace Lofas.SportsTracks.Hitta_SE_MapProvider
 #if ST_2_1
                             listener.NotifyMapImageReady(obj);
 #else
-                            //TODO: Get bounds for tile, center is set
-                            //listener.InvalidateRegion(new GPSBounds(
-//    new GPSLocation(cx +, cy -),
-//    new GPSLocation(cx-,cy+)));
 
 #endif
                         }
