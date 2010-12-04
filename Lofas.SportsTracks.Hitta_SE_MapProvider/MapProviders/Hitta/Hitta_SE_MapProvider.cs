@@ -186,6 +186,8 @@ namespace Lofas.SportsTracks.Hitta_SE_MapProvider
                         double tileMeterPerPixel;
                         Hitta_SE_MapProjection.getMetersPerPixel(useZoomLevel, out tileMeterPerPixel, out useScale);
                         // Get offset in meters from the center position.
+                        //The size invalidated is twice the actual RT90 area. This seem to be required to include the complete tile
+                        //Otherwise may there be a row or column on the sides that do not display at all
                         double tileXOffsetFromCenter = 2 * tileX2 * tileMeterPerPixel;
                         double tileYOffsetFromCenter = 2 * tileY2 * tileMeterPerPixel;
                         // Find out upper left and bottom right corner of the tile.
