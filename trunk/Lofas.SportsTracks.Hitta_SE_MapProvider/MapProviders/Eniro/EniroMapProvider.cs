@@ -122,74 +122,23 @@ namespace Lofas.SportsTracks.Hitta_SE_MapProvider
         public int DrawMap(IMapImageReadyListener readyListener, Graphics graphics, Rectangle drawRect,
                            Rectangle clipRect, IGPSLocation center, double zoom)
         {
-            // Convert the zoom level to match the zoom-levels of Eniro.
-            double eniroZoomlevel = ENIRO_MAX_ZOOMLEVEL - zoom;
-
             int numberOfTilesQueued = 0;
             if (EniroMapProjection.IsValidLocation(center))
             {
-                long xTileOfCenter = m_MapProjection.XTile(center.LongitudeDegrees, eniroZoomlevel);
-                long yTileOfCenter = m_MapProjection.YTile(center.LatitudeDegrees, eniroZoomlevel);
-                long xPixelOfCenter = m_MapProjection.Xpixel(center.LongitudeDegrees, eniroZoomlevel);
-                long yPixelOfCenter = m_MapProjection.Ypixel(center.LatitudeDegrees, eniroZoomlevel);
-                long xPixelOfNWCornerCenterTile = m_MapProjection.PixelOfNorthWestCornerOfTile(xTileOfCenter);
-                long yPixelOfNWCornerCenterTile = m_MapProjection.PixelOfNorthWestCornerOfTile(yTileOfCenter);
-
-                long xPixelOffsetCenterVsNWCornerOfCenterTile = xPixelOfCenter - xPixelOfNWCornerCenterTile;
-                long yPixelOffsetCenterVsNWCornerOfCenterTile = yPixelOfCenter - yPixelOfNWCornerCenterTile;
-
-                long xPixelsFromLeftEdgeOfDrawingAreaToLeftEdgeOfCenterTile = (drawRect.Width/2) -
-                                                                              xPixelOffsetCenterVsNWCornerOfCenterTile;
-                long yPixelsFromTopEdgeOfDrawingAreaToTopEdgeOfCenterTile = (drawRect.Height/2) -
-                                                                            yPixelOffsetCenterVsNWCornerOfCenterTile;
-
-                int noOfTilesToBeDrawnToTheLeftOfCenterTile =
-                    (int) Math.Ceiling((double) xPixelsFromLeftEdgeOfDrawingAreaToLeftEdgeOfCenterTile/TILE_SIZE);
-                int noOfTilesToBeDrawnAboveOfCenterTile =
-                    (int) Math.Ceiling((double) yPixelsFromTopEdgeOfDrawingAreaToTopEdgeOfCenterTile/TILE_SIZE);
-
-                long xNWStartPixel = xPixelsFromLeftEdgeOfDrawingAreaToLeftEdgeOfCenterTile -
-                                     (TILE_SIZE*noOfTilesToBeDrawnToTheLeftOfCenterTile);
-                long yNWStartPixel = yPixelsFromTopEdgeOfDrawingAreaToTopEdgeOfCenterTile -
-                                     (TILE_SIZE*noOfTilesToBeDrawnAboveOfCenterTile);
-
-                int noOfTilesToBeDrawnHorizontally = (int) Math.Ceiling((double) drawRect.Width/TILE_SIZE + 1);
-                int noOfTilesToBeDrawnVertically = (int) Math.Ceiling((double) drawRect.Height/TILE_SIZE + 1);
-                long startXTile = xTileOfCenter - noOfTilesToBeDrawnToTheLeftOfCenterTile;
-                long startYTile = yTileOfCenter - noOfTilesToBeDrawnAboveOfCenterTile;
-
-                // Calculation to find out which region to be invalidated
-                Point northWestPoint = new Point(-drawRect.Width/2, -drawRect.Height/2);
-                Point southEastPoint = new Point(drawRect.Width/2, drawRect.Height/2);
-                IGPSLocation northWestLocation = m_MapProjection.PixelToGPS(center, zoom, northWestPoint);
-                IGPSLocation southEastLocation = m_MapProjection.PixelToGPS(center, zoom, southEastPoint);
-                GPSBounds regionToBeInvalidated = new GPSBounds(northWestLocation, southEastLocation);
-
-                // We have calculated the start tile, that is the tile in the north-west corner of the drawing area. 
-                // Now we will iterate left to right and top to bottom so that all tiles is either drawn or downloaded.
-                for (int x = 0; x < noOfTilesToBeDrawnHorizontally; x++)
+                foreach (EniroTileInfo t in getTileInfo(drawRect, zoom, center))
                 {
-                    for (int y = 0; y < noOfTilesToBeDrawnVertically; y++)
+                    // Find out if the tile is cached on disk or needs to be downloaded from Eniro.
+                    if (IsCached(t.pixTileX, t.pixTileY, t.eniroZoomlevel))
                     {
-                        long tileXToBeDrawn = startXTile + x;
-                        long tileYToBeDrawn = startYTile + y;
-                        long tileYToBeDrawnEniro = (long) Math.Pow(2, eniroZoomlevel) - 1 - tileYToBeDrawn;
-
-                        // Find out if the tile is cached on disk or needs to be downloaded from Eniro.
-                        if (IsCached(tileXToBeDrawn, tileYToBeDrawnEniro, eniroZoomlevel))
-                        {
-                            Image img = getImageFromCache(tileXToBeDrawn, tileYToBeDrawnEniro, eniroZoomlevel);
-                            long ix = xNWStartPixel + x*TILE_SIZE;
-                            long iy = yNWStartPixel + y*TILE_SIZE;
-                            graphics.DrawImage(img, ix, iy, TILE_SIZE, TILE_SIZE);
-                            img.Dispose();
-                        }
-                        else
-                        {
-                            QueueDownload(tileXToBeDrawn, tileYToBeDrawnEniro, eniroZoomlevel, regionToBeInvalidated,
-                                          readyListener);
-                            numberOfTilesQueued++;
-                        }
+                        Image img = getImageFromCache(t.pixTileX, t.pixTileY, t.eniroZoomlevel);
+                        graphics.DrawImage(img, t.iTileX, t.iTileY, t.widthX, t.heightY);
+                        img.Dispose();
+                    }
+                    else
+                    {
+                        QueueDownload(t.pixTileX, t.pixTileY, t.eniroZoomlevel, t.regionToBeInvalidated,
+                                      readyListener);
+                        numberOfTilesQueued++;
                     }
                 }
             }
@@ -246,7 +195,24 @@ namespace Lofas.SportsTracks.Hitta_SE_MapProvider
         ///<param name="zoomLevel">The current zoom level.</param>
         public void Refresh(Rectangle drawRectangle, IGPSLocation center, double zoomLevel)
         {
-            //TODO: Delete cached tiles
+            if (EniroMapProjection.IsValidLocation(center))
+            {
+                foreach (EniroTileInfo t in getTileInfo(drawRectangle, zoomLevel, center))
+                {
+                    if (IsCached(t.pixTileX, t.pixTileY, t.eniroZoomlevel))
+                    {
+                        string str = getFilePath(t.pixTileX, t.pixTileY, t.eniroZoomlevel);
+
+                        try
+                        {
+                            File.Delete(str);
+                        }
+                        catch (Exception)
+                        {
+                        }
+                    }
+                }
+            }
         }
 
         ///<summary>
@@ -258,6 +224,101 @@ namespace Lofas.SportsTracks.Hitta_SE_MapProvider
         }
 
         #endregion
+
+        /// <summary>
+        /// Wrap information about tiles
+        /// </summary>
+        private class EniroTileInfo
+        {
+            public EniroTileInfo(long iTileX, long iTileY, long pixTileX, long pixTileY, double eniroZoomlevel, int widthX, int heightY, IGPSBounds regionToBeInvalidated)
+            {
+                this.iTileX = iTileX;
+                this.iTileY = iTileY;
+                this.pixTileX = pixTileX;
+                this.pixTileY = pixTileY;
+                this.eniroZoomlevel = eniroZoomlevel;
+                this.widthX = widthX;
+                this.heightY = heightY;
+                this.regionToBeInvalidated = regionToBeInvalidated;
+            }
+            public long iTileX;
+            public long iTileY;
+            public long pixTileX;
+            public long pixTileY;
+            public double eniroZoomlevel;
+            public int widthX;
+            public int heightY;
+            public IGPSBounds regionToBeInvalidated;
+        }
+
+        /// <summary>
+        /// Get information about Eniro tiles
+        /// </summary>
+        private IList<EniroTileInfo> getTileInfo(System.Drawing.Rectangle drawRect, double zoom, IGPSLocation center)
+        {
+            IList<EniroTileInfo> tiles = new List<EniroTileInfo>();
+
+            // Convert the zoom level to match the zoom-levels of Eniro.
+            double eniroZoomlevel = ENIRO_MAX_ZOOMLEVEL - zoom;
+
+            if (EniroMapProjection.IsValidLocation(center))
+            {
+                long xTileOfCenter = m_MapProjection.XTile(center.LongitudeDegrees, eniroZoomlevel);
+                long yTileOfCenter = m_MapProjection.YTile(center.LatitudeDegrees, eniroZoomlevel);
+                long xPixelOfCenter = m_MapProjection.Xpixel(center.LongitudeDegrees, eniroZoomlevel);
+                long yPixelOfCenter = m_MapProjection.Ypixel(center.LatitudeDegrees, eniroZoomlevel);
+                long xPixelOfNWCornerCenterTile = m_MapProjection.PixelOfNorthWestCornerOfTile(xTileOfCenter);
+                long yPixelOfNWCornerCenterTile = m_MapProjection.PixelOfNorthWestCornerOfTile(yTileOfCenter);
+
+                long xPixelOffsetCenterVsNWCornerOfCenterTile = xPixelOfCenter - xPixelOfNWCornerCenterTile;
+                long yPixelOffsetCenterVsNWCornerOfCenterTile = yPixelOfCenter - yPixelOfNWCornerCenterTile;
+
+                long xPixelsFromLeftEdgeOfDrawingAreaToLeftEdgeOfCenterTile = (drawRect.Width / 2) -
+                                                                              xPixelOffsetCenterVsNWCornerOfCenterTile;
+                long yPixelsFromTopEdgeOfDrawingAreaToTopEdgeOfCenterTile = (drawRect.Height / 2) -
+                                                                            yPixelOffsetCenterVsNWCornerOfCenterTile;
+
+                int noOfTilesToBeDrawnToTheLeftOfCenterTile =
+                    (int)Math.Ceiling((double)xPixelsFromLeftEdgeOfDrawingAreaToLeftEdgeOfCenterTile / TILE_SIZE);
+                int noOfTilesToBeDrawnAboveOfCenterTile =
+                    (int)Math.Ceiling((double)yPixelsFromTopEdgeOfDrawingAreaToTopEdgeOfCenterTile / TILE_SIZE);
+
+                long xNWStartPixel = xPixelsFromLeftEdgeOfDrawingAreaToLeftEdgeOfCenterTile -
+                                     (TILE_SIZE * noOfTilesToBeDrawnToTheLeftOfCenterTile);
+                long yNWStartPixel = yPixelsFromTopEdgeOfDrawingAreaToTopEdgeOfCenterTile -
+                                     (TILE_SIZE * noOfTilesToBeDrawnAboveOfCenterTile);
+
+                int noOfTilesToBeDrawnHorizontally = (int)Math.Ceiling((double)drawRect.Width / TILE_SIZE + 1);
+                int noOfTilesToBeDrawnVertically = (int)Math.Ceiling((double)drawRect.Height / TILE_SIZE + 1);
+                long startXTile = xTileOfCenter - noOfTilesToBeDrawnToTheLeftOfCenterTile;
+                long startYTile = yTileOfCenter - noOfTilesToBeDrawnAboveOfCenterTile;
+
+                // Calculation to find out which region to be invalidated
+                Point northWestPoint = new Point(-drawRect.Width / 2, -drawRect.Height / 2);
+                Point southEastPoint = new Point(drawRect.Width / 2, drawRect.Height / 2);
+                IGPSLocation northWestLocation = m_MapProjection.PixelToGPS(center, zoom, northWestPoint);
+                IGPSLocation southEastLocation = m_MapProjection.PixelToGPS(center, zoom, southEastPoint);
+                GPSBounds regionToBeInvalidated = new GPSBounds(northWestLocation, southEastLocation);
+
+                // We have calculated the start tile, that is the tile in the north-west corner of the drawing area. 
+                // Now we will iterate left to right and top to bottom so that all tiles is either drawn or downloaded.
+                for (int x = 0; x < noOfTilesToBeDrawnHorizontally; x++)
+                {
+                    for (int y = 0; y < noOfTilesToBeDrawnVertically; y++)
+                    {
+                        long tileXToBeDrawn = startXTile + x;
+                        long tileYToBeDrawn = startYTile + y;
+                        long tileYToBeDrawnEniro = (long)Math.Pow(2, eniroZoomlevel) - 1 - tileYToBeDrawn;
+                        long ix = xNWStartPixel + x * TILE_SIZE;
+                        long iy = yNWStartPixel + y * TILE_SIZE;
+
+                        tiles.Add(new EniroTileInfo(ix, iy, tileXToBeDrawn, tileYToBeDrawnEniro, eniroZoomlevel, TILE_SIZE, TILE_SIZE, regionToBeInvalidated));
+                    }
+                }
+            }
+
+            return tiles;
+        }
 
         /// <summary>
         /// This method downloads a tile and saves it to disk.
@@ -406,6 +467,7 @@ namespace Lofas.SportsTracks.Hitta_SE_MapProvider
         {
             m_DownloadQueueItems.Clear();
         }
+
 #if ST_2_1
         //A few methods differ ST2/ST3, the ST2 methods are separated
         public System.Drawing.Rectangle MapImagePixelRect(object mapImage, System.Drawing.Rectangle drawRectangle, ZoneFiveSoftware.Common.Data.GPS.IGPSLocation center, double zoomLevel)
