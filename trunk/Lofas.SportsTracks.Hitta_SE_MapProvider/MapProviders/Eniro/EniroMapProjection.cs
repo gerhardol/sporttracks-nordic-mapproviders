@@ -65,7 +65,10 @@ namespace Lofas.SportsTracks.Hitta_SE_MapProvider
             catch (Exception e)
             {
                 Debug.Print(e.Message);
-                throw e;
+                //throw e;
+                //Avoid exception when the position is invalid
+                dx = 0;
+                dy = 0;
             }
             return new Point((int)dx, (int)dy);
         }
@@ -100,7 +103,10 @@ namespace Lofas.SportsTracks.Hitta_SE_MapProvider
             catch (Exception e)
             {
                 Debug.Print(e.Message);
-                throw e;
+                //throw e;
+                //Avoid exception when 
+                latitude = origin.LatitudeDegrees + (float)(pixel.Y*zoomLevel/20000);
+                longitude = origin.LongitudeDegrees + (float)(pixel.X * zoomLevel / 20000);
             }
             return new GPSLocation(latitude, longitude);
         }
