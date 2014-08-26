@@ -1,0 +1,15 @@
+#summary Summary Changes
+#labels Featured
+
+
+This page describes the changes between plugins. The change log can contain further details.
+
+===Changes===
+
+1.6.51 2014-08-26
+ * Fixed hitta.se maps
+ * Requires SportTracks 3.1.5349
+
+===Feedback===
+For patches, bug reports or feature suggestions, use the Google Code issue list.
+For other feedback please use the !SportTracks forum or this wiki.
