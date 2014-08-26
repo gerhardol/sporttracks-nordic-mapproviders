@@ -79,7 +79,7 @@ namespace Lofas.SportsTracks.Hitta_SE_MapProvider
                 m_GUID = new Guid("9BD470DD-3078-456f-8175-1A714D286B90");
                 m_Name = "Hitta.se Karta";
             }
-            string url = "http://karta.hitta.se/mapstore/service/tile/";
+            var url = "http://static.hitta.se/tile/v2/";
             if (view == "Sat")
             {
                 url += "1/";
