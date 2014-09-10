@@ -18,6 +18,7 @@ License along with this library. If not, see <http://www.gnu.org/licenses/>.
 //#define nontile
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Text;
 using System.Runtime.InteropServices;
 using System.IO;
@@ -101,15 +102,32 @@ namespace Lofas.SportsTracks.Hitta_SE_MapProvider
             get { return m_DownloadQueueItems.Count; }
         }
 
+        /// <summary>
+        /// Draw the map. Any map images which are immediately available (e.g. cached on disk) should be drawn immediately.  For missing map images, queue them for download and return the number missing.
+        /// </summary>
+        /// <param name="listener"></param>
+        /// <param name="graphics"></param>
+        /// <param name="drawRectangle"></param>
+        /// <param name="clipRectangle"></param>
+        /// <param name="center"></param>
+        /// <param name="zoomLevel">Zoom levels are passed from Sport Tracks from 0.5 up to</param>
+        /// <returns></returns>
         public int DrawMap(IMapImageReadyListener listener, System.Drawing.Graphics graphics, System.Drawing.Rectangle drawRectangle, System.Drawing.Rectangle clipRectangle, ZoneFiveSoftware.Common.Data.GPS.IGPSLocation center, double zoomLevel)
         {
             double x, y;
 
             int numQueued = 0;
-            if (0 < Hitta_SE_MapProjection.isValidPoint(center))
+            try
             {
-                Hitta_SE_MapProjection.WGS84ToRT90(center, out x, out y);
-                numQueued = DrawTiles(listener, graphics, ref drawRectangle, zoomLevel, x, y);
+                if (0 < Hitta_SE_MapProjection.isValidPoint(center))
+                {
+                    Hitta_SE_MapProjection.WGS84ToRT90(center, out x, out y);
+                    numQueued = DrawTiles(listener, graphics, ref drawRectangle, zoomLevel, x, y);
+                }
+            }
+            catch (Exception e)
+            {
+                Debug.Print(e.Message + Environment.NewLine + e.StackTrace);
             }
             return numQueued;
         }
@@ -168,7 +186,7 @@ namespace Lofas.SportsTracks.Hitta_SE_MapProvider
                                 string geoCenterString = row + "/" + column;
                                 string url = m_BaseUrl + resolution.ToString(CultureInfo.InvariantCulture) + "/" + geoCenterString;
 #endif
-
+                                Debug.Print(url + " ZOOM: " + useZoomLevel + "/" + resolution);
                                 Image img = Image.FromStream(STWebClient.Instance.OpenRead(url));
                                 img.Save(getFilePath(iRx, iRy, useZoomLevel, true));
                                 img.Dispose();
@@ -263,39 +281,11 @@ namespace Lofas.SportsTracks.Hitta_SE_MapProvider
             double offX = -1 * tileDrawWidth; // x_Diff / tileMeterPerPixel;
             double offY = 0; // y_Diff / tileMeterPerPixel;
 
-            if (metersPerPixel < 1)
+            // Changed by Magnus Wallström. There is some problem with the zoom level 0.5 
+            // which makes the tiles position vertically wrong. Doing this change seemed to solve it. 
+            if (metersPerPixel == 0.75)
             {
-                if (Math.Abs(metersPerPixel-0.65) < 1e-6)
-                {
-                        offY = -tileDrawWidth;
-                }
-                else if (metersPerPixel == 0.455)
-                {
-                 
-                        offY = -tileDrawWidth * 2;
-                        //offX -= tileDrawWidth;
-                }
-                else if (metersPerPixel == 0.38)
-                {
-
-                    offY = -tileDrawWidth * 2;
-                    //offX -= tileDrawWidth;
-                }
-                else if (Math.Abs(metersPerPixel-0.305)<1e-6)
-                {
-                    offY = -tileDrawWidth*3;
-                    offX -= tileDrawWidth;
-                }
-                else if (metersPerPixel == 0.275)
-                {
-                    offY = -tileDrawWidth * 3;
-                }
-                else if (metersPerPixel == 0.2)
-                {
-                    offY = -tileDrawWidth * 2;
-                    offX -= tileDrawWidth;
-                }
-                
+                offY = -tileDrawWidth;                    
             }
 
             int endTcolumn = (int)Math.Round(((lrX + tileMeterPerPixel * tileX2 - bottomLeftX)) / (2*tileX2 * resolution), 0);
@@ -431,12 +421,12 @@ namespace Lofas.SportsTracks.Hitta_SE_MapProvider
 
         public double MinimumZoom
         {
-            get { return 0.35; }
+            get { return 0.5; }
         }
 
         public bool SupportsFractionalZoom
         {
-            get { return true; }
+            get { return false; }
         }
 
         public string Name

@@ -37,8 +37,8 @@ namespace Lofas.SportsTracks.Hitta_SE_MapProvider
 {
     public class Hitta_SE_MapProjection : IMapProjection
     {
-        private static readonly double[] scaleValues = { 756, 1890, 7559, 15118, 37795, 94488, 264567, 755906, 2645669, 13228346 };
-        private static readonly double[] ZOOM_LEVELS = { 0.2, 0.5, 2, 4, 10, 25, 70, 200, 700, 3500 };
+        private static readonly double[] scaleValues = { 1890, 3780, 7559, 15118, 30236, 60472, 120944, 241888, 483776, 967552, 1935104, 3870208 };
+        private static readonly double[] ZOOM_LEVELS = { 0.5, 1, 2, 4, 8, 16, 32, 64, 128, 256, 512, 1024 };
 
         public static double getResolution(double useZoomLevel)
         {
@@ -52,19 +52,6 @@ namespace Lofas.SportsTracks.Hitta_SE_MapProvider
         }
         public static double getMetersPerPixel(double zoomLevel, out double tileMeterPerPixel, out double hittascale)
         {
-            //double useZoomLevel = ZOOM_LEVELS[ZOOM_LEVELS.Length - 1];
-            //double useScale = scaleValues[scaleValues.Length - 1];
-            //double minDist = Double.MaxValue;
-            /*for (int i = ZOOM_LEVELS.Length - 1; i >= 0; i--)
-            {
-                if (Math.Abs(zoomLevel - ZOOM_LEVELS[i]) < minDist)
-                {
-                    useZoomLevel = ZOOM_LEVELS[i];
-                    useScale = scaleValues[i];
-                    minDist = Math.Abs(zoomLevel - ZOOM_LEVELS[i]);
-                }
-            }*/
-
             int zoomLevelIndex = (int)Math.Floor(zoomLevel);
             if (zoomLevelIndex < 0) { zoomLevelIndex = 0; }
             if (zoomLevelIndex >= scaleValues.Length) { zoomLevelIndex = scaleValues.Length - 1; }
