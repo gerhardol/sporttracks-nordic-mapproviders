@@ -27,13 +27,13 @@ using ZoneFiveSoftware.Common.Visuals.Mapping;
 
 namespace Lofas.SportsTracks.Hitta_SE_MapProvider
 {
-    public class EniroMapProjection : IMapProjection
+    public class HittaEniroMapProjection : IMapProjection
     {
         // Här ska vi konvertera från GPS till Pixel och vice versa. Vi får in en original GPS-position och en gps position och en zoomnivå. 
         // Då ska vi räkna ut vilken punkt gpspositionen med utgångspunkt från originalpositionen. 
         // Följande GPS-pos skickas in 60,63974;16,96524 och det ger punkten -186;-65
 
-        private const int ENIRO_MAX_ZOOMLEVEL = 20;
+        private const int MAX_ZOOMLEVEL = 20;
         private const int TILE_WIDTH = 256;
 
         #region IMapProjection Members
@@ -49,7 +49,7 @@ namespace Lofas.SportsTracks.Hitta_SE_MapProvider
         ///</returns>
         public Point GPSToPixel(IGPSLocation origin, double zoomLevel, IGPSLocation gps)
         {
-            zoomLevel = ENIRO_MAX_ZOOMLEVEL - zoomLevel;
+            zoomLevel = MAX_ZOOMLEVEL - zoomLevel;
             long dx;
             long dy;
             try
@@ -86,7 +86,7 @@ namespace Lofas.SportsTracks.Hitta_SE_MapProvider
         ///</returns>
         public IGPSLocation PixelToGPS(IGPSLocation origin, double zoomLevel, Point pixel)
         {
-            zoomLevel = ENIRO_MAX_ZOOMLEVEL - zoomLevel;
+            zoomLevel = MAX_ZOOMLEVEL - zoomLevel;
             float latitude;
             float longitude;
             try
@@ -121,7 +121,7 @@ namespace Lofas.SportsTracks.Hitta_SE_MapProvider
         /// <returns></returns>
         public long Xpixel(double longitude, double zoom)
         {
-            if (zoom > ENIRO_MAX_ZOOMLEVEL)
+            if (zoom > MAX_ZOOMLEVEL)
             {
                 return 0;
             }
@@ -141,7 +141,7 @@ namespace Lofas.SportsTracks.Hitta_SE_MapProvider
         /// <returns></returns>
         public long Ypixel(double latitude, double zoom)
         {
-            if (zoom > ENIRO_MAX_ZOOMLEVEL)
+            if (zoom > MAX_ZOOMLEVEL)
             {
                 return 0;
             }

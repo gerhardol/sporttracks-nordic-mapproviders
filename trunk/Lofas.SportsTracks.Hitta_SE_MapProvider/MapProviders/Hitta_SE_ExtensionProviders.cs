@@ -18,6 +18,8 @@ License along with this library. If not, see <http://www.gnu.org/licenses/>.
 using System;
 using System.Collections.Generic;
 using System.Text;
+using Lofas.SportsTracks.Hitta_SE_MapProvider.Common;
+using Lofas.SportsTracks.Hitta_SE_MapProvider.MapProviders.Geodata;
 using ZoneFiveSoftware.Common.Visuals.Fitness;
 #if ST_2_1
 using ZoneFiveSoftware.Common.Visuals.Fitness.GPS;
@@ -59,11 +61,11 @@ namespace Lofas.SportsTracks.Hitta_SE_MapProvider
                 if (null == m_List)
                 {
                     m_List = new List<IMapTileProvider>();
-                    m_List.Add(new EniroMapProvider("map"));
-                    m_List.Add(new EniroMapProvider("aerial"));
-                    m_List.Add(new EniroMapProvider("nautical"));
-                    m_List.Add(new Hitta_SE_MapProvider("Sat"));
-                    m_List.Add(new Hitta_SE_MapProvider("Map"));
+                    m_List.Add(new HittaEniroMapProvider(SwedishMapProvider.Eniro, MapViewType.Map));
+                    m_List.Add(new HittaEniroMapProvider(SwedishMapProvider.Eniro, MapViewType.Aerial));
+                    m_List.Add(new HittaEniroMapProvider(SwedishMapProvider.Eniro, MapViewType.Nautical));
+                    m_List.Add(new HittaEniroMapProvider(SwedishMapProvider.Hitta, MapViewType.Map));
+                    m_List.Add(new HittaEniroMapProvider(SwedishMapProvider.Hitta, MapViewType.Aerial));
                 }
                 return m_List; 
             }

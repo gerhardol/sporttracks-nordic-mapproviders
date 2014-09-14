@@ -20,6 +20,7 @@ using System.Collections.Generic;
 using System.Drawing;
 using System.IO;
 using System.Threading;
+using Lofas.SportsTracks.Hitta_SE_MapProvider.Common;
 using ZoneFiveSoftware.Common.Data.GPS;
 #if ST_2_1
 using ZoneFiveSoftware.Common.Visuals.Fitness.GPS;
@@ -61,7 +62,7 @@ namespace Lofas.SportsTracks.Hitta_SE_MapProvider
         public EniroMapProvider(string mapViewType)
         {
             switch (mapViewType)
-            {
+            {                    
                 case "map":
                     {
                         m_ImageExtension = ".png";
@@ -123,7 +124,7 @@ namespace Lofas.SportsTracks.Hitta_SE_MapProvider
                            Rectangle clipRect, IGPSLocation center, double zoom)
         {
             int numberOfTilesQueued = 0;
-            if (EniroMapProjection.IsValidLocation(center))
+            if (HittaEniroMapProjection.IsValidLocation(center))
             {
                 foreach (EniroTileInfo t in getTileInfo(drawRect, zoom, center))
                 {
