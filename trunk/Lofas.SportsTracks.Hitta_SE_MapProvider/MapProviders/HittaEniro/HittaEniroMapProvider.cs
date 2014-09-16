@@ -148,7 +148,7 @@ namespace Lofas.SportsTracks.Hitta_SE_MapProvider
 #else
                 Plugin.m_Application.Configuration.CommonWebFilesFolder, GUIDs.PluginMain.ToString() + 
 #endif
-                 + Path.DirectorySeparatorChar + "_" + m_MapProviderAbbreviation);
+                 Path.DirectorySeparatorChar + m_MapProviderAbbreviation);
             m_DownloadQueueItems = new Dictionary<string, string>();
         }
 
