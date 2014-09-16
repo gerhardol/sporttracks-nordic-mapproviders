@@ -52,6 +52,9 @@ namespace Lofas.SportsTracks.Hitta_SE_MapProvider
 
         private readonly string m_Name;
         private readonly string m_ViewTypeInUrl;
+        private readonly int m_minimumZoom;
+        private readonly int m_maximumZoom;
+
 
         #endregion
 
@@ -77,6 +80,8 @@ namespace Lofas.SportsTracks.Hitta_SE_MapProvider
                             m_Name = "Eniro - Karta";
                             m_ViewTypeInUrl = "map";
                             m_MapProviderAbbreviation = "EniroMap";
+                            m_maximumZoom = 15;
+                            m_minimumZoom = 3;
                             break;
                         }
                         case MapViewType.Aerial:
@@ -86,6 +91,8 @@ namespace Lofas.SportsTracks.Hitta_SE_MapProvider
                             m_Name = "Eniro - Flygfoto";
                             m_ViewTypeInUrl = "aerial";
                             m_MapProviderAbbreviation = "EniroAer";
+                            m_maximumZoom = 15;
+                            m_minimumZoom = 2;
                             break;
                         }
                         case MapViewType.Nautical:
@@ -95,6 +102,8 @@ namespace Lofas.SportsTracks.Hitta_SE_MapProvider
                             m_Name = "Eniro - Sjökort";
                             m_ViewTypeInUrl = "nautical";
                             m_MapProviderAbbreviation = "EniroNau";
+                            m_maximumZoom = 15;
+                            m_minimumZoom = 3;
                             break;
                         }
                     }
@@ -111,6 +120,8 @@ namespace Lofas.SportsTracks.Hitta_SE_MapProvider
                             m_Name = "Hitta - Karta";
                             m_ViewTypeInUrl = "0";
                             m_MapProviderAbbreviation = "HittaMap";
+                            m_maximumZoom = 15;
+                            m_minimumZoom = 3;
                             break;
                         }
                         case MapViewType.Aerial:
@@ -120,6 +131,8 @@ namespace Lofas.SportsTracks.Hitta_SE_MapProvider
                             m_Name = "Hitta - Flygfoto";
                             m_ViewTypeInUrl = "1";
                             m_MapProviderAbbreviation = "HittaAer";
+                            m_maximumZoom = 15;
+                            m_minimumZoom = 2;
                             break;
                         }
                     }
@@ -206,7 +219,7 @@ namespace Lofas.SportsTracks.Hitta_SE_MapProvider
         /// </summary>
         public double MaximumZoom
         {
-            get { return 10; }
+            get { return m_maximumZoom; }
         }
 
         /// <summary>        
@@ -214,7 +227,7 @@ namespace Lofas.SportsTracks.Hitta_SE_MapProvider
         /// </summary>
         public double MinimumZoom
         {
-            get { return 0; }
+            get { return m_minimumZoom; }
         }
 
         ///<summary>
