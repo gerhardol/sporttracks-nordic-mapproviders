@@ -6,11 +6,11 @@ This page describes the changes between plugins. The change log can contain furt
 
 ===Changes===
 
-1.6.55 2014-09-16
+1.6.55 2014-09-16 (Plugin Catalog)
  * Using hitta.se beta interface, to correct some minor issues with the existing correction and prepare for the current hitta implementation being depreciated. Eniro and hitta now shares the same implementation. 
  
 Note that the path to cached tiles is changed with this release.
-You may want to clean up old tiles by typing "%ProgramData%\ZoneFiveSoftware\SportTracks\3\Web Files\" in the explorer bar, then delete all cache directories starting with "ba45d36b-cc00-4dcf-8768-e24237adca4b92_" (new cache dir do not have the "92_" suffix).
+You may want to clean up old tiles by typing "%ProgramData%\ZoneFiveSoftware\SportTracks\3\Web Files\ba45d36b-cc00-4dcf-8768-e24237adca4b" in the explorer bar, then delete all old directories.
  
 1.6.51 2014-08-26
  * Fixed hitta.se maps
