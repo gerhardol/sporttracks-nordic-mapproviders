@@ -2,4 +2,4 @@ Project that build a plugin for Sporttracks that adds map functionality for Nord
 
 Download from [SportTracks Plugin page](http://www.zonefivesoftware.com/sporttracks/plugins/?p=swedish-mapproviders).
 
-![http://sporttracks-nordic-mapproviders.googlecode.com/svn/wiki/nordicmaps.png](http://sporttracks-nordic-mapproviders.googlecode.com/svn/wiki/nordicmaps.png)
+![https://github.com/gerhardol/sporttracks-nordic-mapproviders/wiki/images/nordicmaps.png](https://github.com/gerhardol/sporttracks-nordic-mapproviders/wiki/images/nordicmaps.png)
