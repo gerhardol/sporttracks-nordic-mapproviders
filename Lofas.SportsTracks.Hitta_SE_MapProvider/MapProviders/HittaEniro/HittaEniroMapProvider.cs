@@ -26,6 +26,7 @@ using ZoneFiveSoftware.Common.Data.GPS;
 using ZoneFiveSoftware.Common.Visuals.Fitness.GPS;
 #else
 using ZoneFiveSoftware.Common.Visuals.Mapping;
+using System.ComponentModel;
 #endif
 
 namespace Lofas.SportsTracks.Hitta_SE_MapProvider
@@ -48,7 +49,9 @@ namespace Lofas.SportsTracks.Hitta_SE_MapProvider
         private readonly SwedishMapProvider m_SwedishMapProvider;
         private readonly string m_MapProviderAbbreviation;
         private readonly HittaEniroMapProjection m_MapProjection = new HittaEniroMapProjection();
-                                            // The projection to use within the EniroMapProvider   
+                                            // The projection to use within the EniroMapProvider
+        //Invalidating the regions for fetched tiles must be done on the main thread
+        private AsyncOperation m_operOnMainThread = null;
 
         private readonly string m_Name;
         private readonly string m_ViewTypeInUrl;
@@ -57,6 +60,17 @@ namespace Lofas.SportsTracks.Hitta_SE_MapProvider
 
 
         #endregion
+
+        private class QueueInfo
+        {
+            public MapTileInfo tileInfo;
+            public IMapImageReadyListener listener;
+            public QueueInfo(MapTileInfo t, IMapImageReadyListener listener)
+            {
+                this.listener = listener;
+                this.tileInfo = t;
+            }
+        }
 
         /// <summary>
         /// Constructor for EniroMapProvider. 
@@ -67,6 +81,7 @@ namespace Lofas.SportsTracks.Hitta_SE_MapProvider
         public HittaEniroMapProvider(SwedishMapProvider provider, MapViewType mapViewType)
         {
             m_SwedishMapProvider = provider;
+            m_operOnMainThread = AsyncOperationManager.CreateOperation(null); 
             switch (provider)
             {
                 case SwedishMapProvider.Eniro:
@@ -189,9 +204,10 @@ namespace Lofas.SportsTracks.Hitta_SE_MapProvider
                     }
                     else
                     {
-                        QueueDownload(t.pixTileX, t.pixTileY, t.zoomlevel, t.regionToBeInvalidated,
-                                      readyListener);
-                        numberOfTilesQueued++;
+                        if(QueueDownload(new QueueInfo(t, readyListener)))
+                        {
+                            numberOfTilesQueued++;
+                        }
                     }
                 }
             }
@@ -375,78 +391,75 @@ namespace Lofas.SportsTracks.Hitta_SE_MapProvider
         /// <summary>
         /// This method downloads a tile and saves it to disk.
         /// </summary>
-        /// <param name="tileXToBeDrawn"></param>
-        /// <param name="tileYToBeDrawn"></param>
-        /// <param name="zoom"></param>
+        /// <param name="t"></param>
         /// <param name="regionToBeInvalidated"></param>
         /// <param name="listener"></param>
-        private void QueueDownload(long tileXToBeDrawn, long tileYToBeDrawn, double zoom,
-                                   IGPSBounds regionToBeInvalidated, IMapImageReadyListener listener)
+        private bool QueueDownload(QueueInfo queueInfo)
         {
-            string item = zoom + "/" + tileXToBeDrawn + "/" + tileYToBeDrawn;
+            string item = queueInfo.tileInfo.zoomlevel + "/" + queueInfo.tileInfo.pixTileX + "/" + queueInfo.tileInfo.pixTileY;
+            bool queued = false;
 
             if (!m_DownloadQueueItems.ContainsKey(item))
             {
+                queued = true;
                 m_DownloadQueueItems.Add(item, "");
                 ThreadPool.QueueUserWorkItem(delegate
-                                                 {
-                                                     try
-                                                     {
-                                                         lock (STWebClient.Instance)
-                                                         {
-                                                             if (m_DownloadQueueItems.ContainsKey(item))
-                                                             {
-                                                                 var url = "";
-                                                                 string baseUrl;
-                                                                 switch (m_SwedishMapProvider)
-                                                                 {
-                                                                     case SwedishMapProvider.Eniro:
+                {
+                    try
+                    {
+                        lock (STWebClient.Instance)
+                        {
+                            if (m_DownloadQueueItems.ContainsKey(item))
+                            {
+                                var url = "";
+                                string baseUrl;
+                                switch (m_SwedishMapProvider)
+                                {
+                                    case SwedishMapProvider.Eniro:
+                                        // Eniro seems to randomly point against one of four different servers. 
+                                        // Therefore I do the same and vary between an url of map01..., map02..., map03... and map04...
+                                        var rnd = new Random();
+                                        int serverIndex = rnd.Next(1, 5);
+                                        baseUrl =
+                                            string.Format(
+                                                "http://map0{0}.eniro.com/geowebcache/service/tms1.0.0/",
+                                                serverIndex);
 
+                                        url = baseUrl + m_ViewTypeInUrl + "/" + item + m_ImageExtension;
+                                        break;
 
-                                                                         // Eniro seems to randomly point against one of four different servers. 
-                                                                         // Therefore I do the same and vary between an url of map01..., map02..., map03... and map04...
-                                                                         var rnd = new Random();
-                                                                         int serverIndex = rnd.Next(1, 5);
-                                                                         baseUrl =
-                                                                             string.Format(
-                                                                                 "http://map0{0}.eniro.com/geowebcache/service/tms1.0.0/",
-                                                                                 serverIndex);
-                                                                         
-                                                                                 url = baseUrl + m_ViewTypeInUrl + "/" +
-                                                                                      item +
-                                                                                      m_ImageExtension;
+                                    case SwedishMapProvider.Hitta:
+                                        baseUrl = "http://static.hitta.se/tile/v3/";
+                                        url = baseUrl + m_ViewTypeInUrl + "/" + item;  //+m_ImageExtension;
+                                        break;
+                                }
 
-                                                                         
-                                                                         break;
-                                                                    case SwedishMapProvider.Hitta:                                                                    
-                                                                         baseUrl = "http://static.hitta.se/tile/v3/";
-                                                                         url = baseUrl + m_ViewTypeInUrl + "/" + item;  //+m_ImageExtension;
-                                                                         break;
-                                                                 }
+                                Image img = Image.FromStream(STWebClient.Instance.OpenRead(url));
+                                img.Save(GetFilePath(queueInfo.tileInfo.pixTileX, queueInfo.tileInfo.pixTileY, queueInfo.tileInfo.zoomlevel, true));
+                                img.Dispose();
+                            }
+                        }
 
-                                                                 Image img =
-                                                                             Image.FromStream(
-                                                                                 STWebClient.Instance.OpenRead(url));
-                                                                 img.Save(GetFilePath(tileXToBeDrawn,
-                                                                     tileYToBeDrawn,
-                                                                     zoom, true));
-                                                                 img.Dispose();
-                                                             }
-                                                         }
-
-                                                         // Invalidate the region of the drawing area
-#if ST_2_1
-                                                         listener.NotifyMapImageReady(regionToBeInvalidated);
-#else
-                                                         listener.InvalidateRegion(regionToBeInvalidated);
-#endif
-                                                     }
-                                                     catch (Exception)
-                                                     {
-                                                     }
-                                                     m_DownloadQueueItems.Remove(item);
-                                                 });
+                        // Invalidate the region of the drawing area
+                        m_operOnMainThread.Post(new SendOrPostCallback(InvalidateRegion), queueInfo);
+                    }
+                    catch (Exception e)
+                    {
+                    }
+                    m_DownloadQueueItems.Remove(item);
+                });
             }
+            return queued;
+        }
+
+        private void InvalidateRegion(object queueInfo)
+        {
+            QueueInfo q = queueInfo as QueueInfo;
+#if ST_2_1
+            q.listener.NotifyMapImageReady(q.tileInfo.regionToBeInvalidated);
+#else
+            q.listener.InvalidateRegion(q.tileInfo.regionToBeInvalidated);
+#endif
         }
 
         /// <summary>
