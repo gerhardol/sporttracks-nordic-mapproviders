@@ -22,17 +22,10 @@
     </Compile>
     <Compile Include="MapProviders\HittaEniro\HittaEniroMapProvider.cs" />
     <Compile Include="MapProviders\HittaEniro\HittaEniroMapProjection.cs" />
-    <Compile Include="MapProviders\Deprecated\Eniro\EniroMapProjection.cs" />
-    <Compile Include="MapProviders\Deprecated\Eniro\EniroMapProvider.cs" />
-    <Compile Include="MapProviders\Deprecated\Eniro_SE_MapProjection.cs" />
     <Compile Include="MapProviders\Geodataportalen\GeodataMapProjection.cs" />
     <Compile Include="MapProviders\Geodataportalen\GeodataMapProvider.cs" />
-    <Compile Include="MapProviders\Deprecated\Hitta\Hitta_SE_MapProjection.cs" />
     <Compile Include="MapProviders\Lofas.Projection.CFProjection.cs" />
-    <Compile Include="MapProviders\Deprecated\Eniro_SE_MapProvider.cs" />
-    <Content Include="MapProviders\Deprecated\EvalJScript.cs" />
     <Compile Include="MapProviders\Hitta_SE_ExtensionProviders.cs" />
-    <Compile Include="MapProviders\Deprecated\Hitta\Hitta_SE_MapProvider.cs" />
     <Compile Include="Plugin.cs" />
     <Compile Include="GUIDs.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
