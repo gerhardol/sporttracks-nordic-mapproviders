@@ -2,7 +2,7 @@ This page describes the changes between plugins. The change log can contain furt
 
 ### Changes ###
 
-1.6.61 2015-04-17 (Plugin Catalog)
+1.6.62 2015-04-17 (Plugin Catalog)
   * hitta did not work after ST 3.1.5510 update
   * Eniro did not work after beginning of April, requests were blocked.
 

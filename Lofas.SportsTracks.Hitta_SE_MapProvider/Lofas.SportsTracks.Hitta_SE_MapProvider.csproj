@@ -22,8 +22,6 @@
     </Compile>
     <Compile Include="MapProviders\HittaEniro\HittaEniroMapProvider.cs" />
     <Compile Include="MapProviders\HittaEniro\HittaEniroMapProjection.cs" />
-    <Compile Include="MapProviders\Geodataportalen\GeodataMapProjection.cs" />
-    <Compile Include="MapProviders\Geodataportalen\GeodataMapProvider.cs" />
     <Compile Include="MapProviders\Lofas.Projection.CFProjection.cs" />
     <Compile Include="MapProviders\Hitta_SE_ExtensionProviders.cs" />
     <Compile Include="Plugin.cs" />
