@@ -168,7 +168,7 @@ namespace Lofas.SportsTracks.Hitta_SE_MapProvider
             m_DownloadQueueItems = new Dictionary<string, string>();
         }
 
-        private string getUrl(MapTileInfo tile)
+        private string tileUrl(MapTileInfo tile)
         {
             var url = "";
             string baseUrl;
@@ -184,16 +184,19 @@ namespace Lofas.SportsTracks.Hitta_SE_MapProvider
                             "http://map0{0}.eniro.com/geowebcache/service/tms1.0.0/",
                             serverIndex);
 
-                    url = baseUrl + m_ViewTypeInUrl + "/" + tile.item + m_ImageExtension;
+                    url = baseUrl + m_ViewTypeInUrl + "/" + tileId(tile) + m_ImageExtension;
                     break;
 
                 case SwedishMapProvider.Hitta:
                     baseUrl = "http://static.hitta.se/tile/v3/";
-                    url = baseUrl + m_ViewTypeInUrl + "/" + tile.item;  //+m_ImageExtension;
+                    url = baseUrl + m_ViewTypeInUrl + "/" + tileId(tile);  //+m_ImageExtension;
                     break;
             }
             return url;
         }
+
+        //Eniro/Hitta has the same type of identification
+        private string tileId(MapTileInfo tile){ return tile.zoomlevel + "/" + tile.pixTileX + "/" + tile.pixTileY; }
 
         #region IMapTileProvider Members
 
@@ -345,8 +348,6 @@ namespace Lofas.SportsTracks.Hitta_SE_MapProvider
             public readonly int widthX;
             public readonly int heightY;
             public readonly IGPSBounds regionToBeInvalidated;
-            public string item { get { return zoomlevel + "/" + pixTileX + "/" + pixTileY; }}
-            //public string url(HittaEniroMapProvider provider) { return provider.getUrl(this); }
        }
 
         /// <summary>
@@ -428,10 +429,10 @@ namespace Lofas.SportsTracks.Hitta_SE_MapProvider
         {
             bool queued = false;
 
-            if (!m_DownloadQueueItems.ContainsKey(queueInfo.tileInfo.item))
+            if (!m_DownloadQueueItems.ContainsKey(tileId(queueInfo.tileInfo)))
             {
                 queued = true;
-                m_DownloadQueueItems.Add(queueInfo.tileInfo.item, "");
+                m_DownloadQueueItems.Add(tileId(queueInfo.tileInfo), "");
                 ThreadPool.QueueUserWorkItem(new WaitCallback(DownloadWorker), queueInfo);
             }
             return queued;
@@ -444,10 +445,11 @@ namespace Lofas.SportsTracks.Hitta_SE_MapProvider
             {
                 lock (STWebClient.Instance)
                 {
-                    if (m_DownloadQueueItems.ContainsKey(queueInfo.tileInfo.item))
+                    if (m_DownloadQueueItems.ContainsKey(tileId(queueInfo.tileInfo)))
                     {
-                        string url = getUrl(queueInfo.tileInfo);
+                        string url = tileUrl(queueInfo.tileInfo);
 
+                        STWebClient.Instance.Headers["User-Agent"] = "Mozilla/5.0 (Windows NT 6.3; WOW64; rv:37.0) Gecko/20100101 Firefox/37.0";
                         Image img = Image.FromStream(STWebClient.Instance.OpenRead(url));
                         img.Save(GetFilePath(queueInfo.tileInfo.pixTileX, queueInfo.tileInfo.pixTileY, queueInfo.tileInfo.zoomlevel, true));
                         img.Dispose();
@@ -460,7 +462,7 @@ namespace Lofas.SportsTracks.Hitta_SE_MapProvider
             catch (Exception e)
             {
             }
-            m_DownloadQueueItems.Remove(queueInfo.tileInfo.item);
+            m_DownloadQueueItems.Remove(tileId(queueInfo.tileInfo));
         }
 
         private void InvalidateRegion(object queueInfoObject)
