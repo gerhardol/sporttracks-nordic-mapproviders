@@ -19,7 +19,7 @@ using System;
 using System.Collections.Generic;
 using System.Text;
 using Lofas.SportsTracks.Hitta_SE_MapProvider.Common;
-using Lofas.SportsTracks.Hitta_SE_MapProvider.MapProviders.Geodata;
+//using Lofas.SportsTracks.Hitta_SE_MapProvider.MapProviders.Geodata;
 using ZoneFiveSoftware.Common.Visuals.Fitness;
 #if ST_2_1
 using ZoneFiveSoftware.Common.Visuals.Fitness.GPS;
@@ -66,6 +66,7 @@ namespace Lofas.SportsTracks.Hitta_SE_MapProvider
                     m_List.Add(new HittaEniroMapProvider(SwedishMapProvider.Eniro, MapViewType.Nautical));
                     m_List.Add(new HittaEniroMapProvider(SwedishMapProvider.Hitta, MapViewType.Map));
                     m_List.Add(new HittaEniroMapProvider(SwedishMapProvider.Hitta, MapViewType.Aerial));
+                    m_List.Add(new HittaEniroMapProvider(SwedishMapProvider.Hitta, MapViewType.Terrain));
                 }
                 return m_List; 
             }

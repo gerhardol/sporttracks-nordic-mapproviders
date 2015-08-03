@@ -151,6 +151,17 @@ namespace Lofas.SportsTracks.Hitta_SE_MapProvider
                             m_minimumZoom = 2;
                             break;
                         }
+                        case MapViewType.Terrain:
+                        {
+                            m_ImageExtension = ".png";
+                            m_GUID = new Guid("49324253-0e5f-425f-a37d-c31e385939cb");
+                            m_Name = provider + " - Friluft";
+                            m_ViewTypeInUrl = "4";
+                            m_MapProviderAbbreviation = m_Name.Replace(" ", "");
+                            m_maximumZoom = 15;
+                            m_minimumZoom = 2;
+                            break;
+                        }
                     }
                     break;
                 }
@@ -184,19 +195,19 @@ namespace Lofas.SportsTracks.Hitta_SE_MapProvider
                             "http://map0{0}.eniro.com/geowebcache/service/tms1.0.0/",
                             serverIndex);
 
-                    url = baseUrl + m_ViewTypeInUrl + "/" + tileId(tile) + m_ImageExtension;
+                    url = baseUrl + tileId(tile) + m_ImageExtension;
                     break;
 
                 case SwedishMapProvider.Hitta:
                     baseUrl = "http://static.hitta.se/tile/v3/";
-                    url = baseUrl + m_ViewTypeInUrl + "/" + tileId(tile);  //+m_ImageExtension;
+                    url = baseUrl + tileId(tile);
                     break;
             }
             return url;
         }
 
         //Eniro/Hitta has the same type of identification
-        private string tileId(MapTileInfo tile){ return tile.zoomlevel + "/" + tile.pixTileX + "/" + tile.pixTileY; }
+        private string tileId(MapTileInfo tile) { return m_ViewTypeInUrl + "/" + tile.zoomlevel + "/" + tile.pixTileX + "/" + tile.pixTileY; }
 
         #region IMapTileProvider Members
 

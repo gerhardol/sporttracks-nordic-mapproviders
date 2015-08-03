@@ -11,7 +11,8 @@
     {
         Map,
         Aerial,
-        Nautical
+        Nautical,
+        Terrain
     }
         
 }
