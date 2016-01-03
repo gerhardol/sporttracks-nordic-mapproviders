@@ -4,7 +4,8 @@
     public enum SwedishMapProvider
     {
         Eniro,
-        Hitta
+        Hitta,
+        Lantmateriet
     };
 
     public enum MapViewType

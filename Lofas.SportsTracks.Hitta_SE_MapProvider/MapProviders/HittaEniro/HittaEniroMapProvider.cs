@@ -40,25 +40,13 @@ namespace Lofas.SportsTracks.Hitta_SE_MapProvider
     {
         #region Private members
 
-        private const int MAX_ZOOMLEVEL = 20;
-        private const int TILE_SIZE = 256;
-        private readonly string m_CacheDirectory; // Directory where to store the cached tiles
         private readonly Dictionary<string, string> m_DownloadQueueItems;
-        private readonly Guid m_GUID;
-        private readonly string m_ImageExtension;
-        private readonly SwedishMapProvider m_SwedishMapProvider;
-        private readonly string m_MapProviderAbbreviation;
-        private readonly HittaEniroMapProjection m_MapProjection = new HittaEniroMapProjection();
-                                            // The projection to use within the EniroMapProvider
         //Invalidating the regions for fetched tiles must be done on the main thread
         private AsyncOperation m_operOnMainThread = null;
 
-        private readonly string m_Name;
-        private readonly string m_ViewTypeInUrl;
-        private readonly int m_minimumZoom;
-        private readonly int m_maximumZoom;
+        private readonly HittaEniroMapProjection m_MapProjection;
 
-
+        private readonly ProviderInfo m_providerInfo;
         #endregion
 
         private class QueueInfo
@@ -73,6 +61,167 @@ namespace Lofas.SportsTracks.Hitta_SE_MapProvider
             }
         }
 
+        private class ProviderInfo
+        {
+            public readonly SwedishMapProvider SwedishMapProvider;
+            public readonly Guid GUID;
+            public readonly string Name;
+            public readonly string ViewTypeInUrl;
+            public readonly int MinimumZoom;
+            public readonly int MaximumZoom;
+            public readonly string ImageExtension;
+            public readonly string CacheDirectory; // Directory where to store the cached tiles
+
+            public readonly int MAX_ZOOMLEVEL;
+            public readonly int TILE_SIZE = 256;
+            public readonly string HttpAuthToken;
+            public readonly string HttpUserAgent; 
+
+            public ProviderInfo(SwedishMapProvider provider, MapViewType mapViewType)
+            {
+                string mapProviderAbbreviation = "";
+                SwedishMapProvider = provider;
+                switch (provider)
+                {
+                    case SwedishMapProvider.Eniro:
+                        {
+                            switch (mapViewType)
+                            {
+                                case MapViewType.Map:
+                                    {
+                                        ImageExtension = ".png";
+                                        GUID = new Guid("3E9661F9-8704-4868-9700-A668DF4C2C75");
+                                        Name = "Eniro - Karta";
+                                        ViewTypeInUrl = "map";
+                                        mapProviderAbbreviation = "EniroMap";
+                                        MaximumZoom = 15;
+                                        MinimumZoom = 3;
+                                        break;
+                                    }
+                                case MapViewType.Aerial:
+                                    {
+                                        ImageExtension = ".jpeg";
+                                        GUID = new Guid("6B07A2D9-8394-496F-A843-751529BB88D9");
+                                        Name = "Eniro - Flygfoto";
+                                        ViewTypeInUrl = "aerial";
+                                        mapProviderAbbreviation = "EniroAer";
+                                        MaximumZoom = 15;
+                                        MinimumZoom = 2;
+                                        break;
+                                    }
+                                case MapViewType.Nautical:
+                                    {
+                                        ImageExtension = ".png";
+                                        GUID = new Guid("C7588CC1-AF51-497D-A6B8-AE18B9F600FD");
+                                        Name = "Eniro - Sjökort";
+                                        ViewTypeInUrl = "nautical";
+                                        mapProviderAbbreviation = "EniroNau";
+                                        MaximumZoom = 15;
+                                        MinimumZoom = 3;
+                                        break;
+                                    }
+                            }
+                            break;
+                        }
+                    case SwedishMapProvider.Hitta:
+                        {
+                            switch (mapViewType)
+                            {
+                                case MapViewType.Map:
+                                    {
+                                        ImageExtension = ".png";
+                                        GUID = new Guid("23FBB14A-0949-4d42-BAA4-95C3AC3BC825");
+                                        Name = "Hitta - Karta";
+                                        ViewTypeInUrl = "0";
+                                        mapProviderAbbreviation = "HittaMap";
+                                        MaximumZoom = 15;
+                                        MinimumZoom = 3;
+                                        break;
+                                    }
+                                case MapViewType.Aerial:
+                                    {
+                                        ImageExtension = ".jpeg";
+                                        GUID = new Guid("9BD470DD-3078-456f-8175-1A714D286B90");
+                                        Name = "Hitta - Flygfoto";
+                                        ViewTypeInUrl = "1";
+                                        mapProviderAbbreviation = "HittaAer";
+                                        MaximumZoom = 15;
+                                        MinimumZoom = 2;
+                                        break;
+                                    }
+                                case MapViewType.Terrain:
+                                    {
+                                        ImageExtension = ".png";
+                                        GUID = new Guid("49324253-0e5f-425f-a37d-c31e385939cb");
+                                        Name = provider + " - Friluft";
+                                        ViewTypeInUrl = "4";
+                                        mapProviderAbbreviation = Name.Replace(" ", "");
+                                        MaximumZoom = 15;
+                                        MinimumZoom = 2;
+                                        break;
+                                    }
+                            }
+                            break;
+                        }
+                    case SwedishMapProvider.Lantmateriet:
+                        {
+                            switch (mapViewType)
+                            {
+                                case MapViewType.Terrain:
+                                    {
+                                        ImageExtension = ".png";
+                                        GUID = new Guid("C58C17A9-EF20-4D3E-9791-8D9EB46C4D57");
+                                        Name = "Lantmäteriet - Terräng";
+                                        ViewTypeInUrl = "3006";
+                                        mapProviderAbbreviation = "LantmaterietTopo";
+                                        MaximumZoom = 12;
+                                        MinimumZoom = 3;
+                                        break;
+                                    }
+                            }
+                            break;
+                        }
+                }
+
+                if (provider == SwedishMapProvider.Lantmateriet)
+                {
+                    MAX_ZOOMLEVEL = 12;
+                    //TILE_SIZE = 256;
+                    //TBD: Make access key configurable
+                    HttpAuthToken = "";// "Bearer " + "";
+                    HttpUserAgent = "";
+                }
+                else
+                {
+                    MAX_ZOOMLEVEL = 20;
+                    //TILE_SIZE = 256;
+                    HttpAuthToken = "";
+                    HttpUserAgent = "Mozilla/5.0 (Windows NT 6.3; WOW64; rv:37.0) Gecko/20100101 Firefox/37.0";
+                }
+
+                CacheDirectory = Path.Combine(
+#if ST_2_1
+                    Plugin.m_Application.SystemPreferences.WebFilesFolder, "MapTiles" +
+#else
+                    Plugin.m_Application.Configuration.CommonWebFilesFolder, GUIDs.PluginMain.ToString() +
+#endif
+                    Path.DirectorySeparatorChar + mapProviderAbbreviation);
+            }
+        }
+
+        public bool Configured
+        {
+            get
+            {
+                if (this.m_providerInfo.SwedishMapProvider != SwedishMapProvider.Lantmateriet ||
+                    !string.IsNullOrEmpty(this.m_providerInfo.HttpAuthToken))
+                {
+                    return true;
+                }
+                return false;
+            }
+        }
+
         /// <summary>
         /// Constructor for EniroMapProvider. 
         /// The map provider takes the mapViewType as a parameter and sets various private member variables.
@@ -81,133 +230,54 @@ namespace Lofas.SportsTracks.Hitta_SE_MapProvider
         /// <param name="mapViewType"></param>
         public HittaEniroMapProvider(SwedishMapProvider provider, MapViewType mapViewType)
         {
-            m_SwedishMapProvider = provider;
-            m_operOnMainThread = AsyncOperationManager.CreateOperation(null); 
-            switch (provider)
-            {
-                case SwedishMapProvider.Eniro:
-                {
-                    switch (mapViewType)
-                    {
-                        case MapViewType.Map:
-                        {
-                            m_ImageExtension = ".png";
-                            m_GUID = new Guid("3E9661F9-8704-4868-9700-A668DF4C2C75");
-                            m_Name = "Eniro - Karta";
-                            m_ViewTypeInUrl = "map";
-                            m_MapProviderAbbreviation = "EniroMap";
-                            m_maximumZoom = 15;
-                            m_minimumZoom = 3;
-                            break;
-                        }
-                        case MapViewType.Aerial:
-                        {
-                            m_ImageExtension = ".jpeg";
-                            m_GUID = new Guid("6B07A2D9-8394-496F-A843-751529BB88D9");
-                            m_Name = "Eniro - Flygfoto";
-                            m_ViewTypeInUrl = "aerial";
-                            m_MapProviderAbbreviation = "EniroAer";
-                            m_maximumZoom = 15;
-                            m_minimumZoom = 2;
-                            break;
-                        }
-                        case MapViewType.Nautical:
-                        {
-                            m_ImageExtension = ".png";
-                            m_GUID = new Guid("C7588CC1-AF51-497D-A6B8-AE18B9F600FD");
-                            m_Name = "Eniro - Sjökort";
-                            m_ViewTypeInUrl = "nautical";
-                            m_MapProviderAbbreviation = "EniroNau";
-                            m_maximumZoom = 15;
-                            m_minimumZoom = 3;
-                            break;
-                        }
-                    }
-                    break;
-                }
-                case SwedishMapProvider.Hitta:
-                {
-                    switch (mapViewType)
-                    {
-                        case MapViewType.Map:
-                        {
-                            m_ImageExtension = ".png";
-                            m_GUID = new Guid("23FBB14A-0949-4d42-BAA4-95C3AC3BC825");
-                            m_Name = "Hitta - Karta";
-                            m_ViewTypeInUrl = "0";
-                            m_MapProviderAbbreviation = "HittaMap";
-                            m_maximumZoom = 15;
-                            m_minimumZoom = 3;
-                            break;
-                        }
-                        case MapViewType.Aerial:
-                        {
-                            m_ImageExtension = ".jpeg";
-                            m_GUID = new Guid("9BD470DD-3078-456f-8175-1A714D286B90");
-                            m_Name = "Hitta - Flygfoto";
-                            m_ViewTypeInUrl = "1";
-                            m_MapProviderAbbreviation = "HittaAer";
-                            m_maximumZoom = 15;
-                            m_minimumZoom = 2;
-                            break;
-                        }
-                        case MapViewType.Terrain:
-                        {
-                            m_ImageExtension = ".png";
-                            m_GUID = new Guid("49324253-0e5f-425f-a37d-c31e385939cb");
-                            m_Name = provider + " - Friluft";
-                            m_ViewTypeInUrl = "4";
-                            m_MapProviderAbbreviation = m_Name.Replace(" ", "");
-                            m_maximumZoom = 15;
-                            m_minimumZoom = 2;
-                            break;
-                        }
-                    }
-                    break;
-                }
-            }
-
-           
-
-            m_CacheDirectory = Path.Combine(
-#if ST_2_1
-                Plugin.m_Application.SystemPreferences.WebFilesFolder, "MapTiles" +
-#else
-                Plugin.m_Application.Configuration.CommonWebFilesFolder, GUIDs.PluginMain.ToString() + 
-#endif
-                 Path.DirectorySeparatorChar + m_MapProviderAbbreviation);
+            m_operOnMainThread = AsyncOperationManager.CreateOperation(null);
             m_DownloadQueueItems = new Dictionary<string, string>();
+            m_providerInfo = new ProviderInfo(provider, mapViewType);
+            m_MapProjection = new HittaEniroMapProjection(m_providerInfo.MAX_ZOOMLEVEL, m_providerInfo.TILE_SIZE);
         }
 
         private string tileUrl(MapTileInfo tile)
         {
-            var url = "";
-            string baseUrl;
-            switch (m_SwedishMapProvider)
+            string url;
+            switch (m_providerInfo.SwedishMapProvider)
             {
                 case SwedishMapProvider.Eniro:
                     // Eniro seems to randomly point against one of four different servers. 
                     // Therefore I do the same and vary between an url of map01..., map02..., map03... and map04...
                     var rnd = new Random();
                     int serverIndex = rnd.Next(1, 5);
-                    baseUrl =
+                    string baseUrl =
                         string.Format(
                             "http://map0{0}.eniro.com/geowebcache/service/tms1.0.0/",
                             serverIndex);
 
-                    url = baseUrl + tileId(tile) + m_ImageExtension;
+                    url = baseUrl + tileId(tile) + m_providerInfo.ImageExtension;
                     break;
 
                 case SwedishMapProvider.Hitta:
                     baseUrl = "http://static.hitta.se/tile/v3/";
                     url = baseUrl + tileId(tile);
                     break;
+
+                case SwedishMapProvider.Lantmateriet:
+                    baseUrl = "https://api.lantmateriet.se/open/topowebb-ccby/v1/wmts/";
+                    //KVP
+                    //baseUrl += "?SERVICE=WMTS&REQUEST=GetTile&VERSION=1.0.0&LAYER=topowebb&STYLE=default&TILEMATRIXSET=3006&TILEMATRIX={0}&TILEROW={1}&TILECOL={2}&FORMAT=image/png";
+                    //REST
+                    //baseUrl += "1.0.0/topowebb/default/3006/{0}/{1}/{2}.png";
+                    //url = string.Format(baseUrl, tile.zoomlevel, tile.pixTileX, tile.pixTileY);
+                    baseUrl += "1.0.0/topowebb/default/";
+                    url = baseUrl + tileId(tile) + m_providerInfo.ImageExtension;
+                    break;
+
+                default:
+                    throw new Exception("Unknown provider: "+ m_providerInfo.SwedishMapProvider);
             }
             return url;
         }
 
         //Eniro/Hitta has the same type of identification
-        private string tileId(MapTileInfo tile) { return m_ViewTypeInUrl + "/" + tile.zoomlevel + "/" + tile.pixTileX + "/" + tile.pixTileY; }
+        private string tileId(MapTileInfo tile) { return m_providerInfo.ViewTypeInUrl + "/" + tile.zoomlevel + "/" + tile.pixTileX + "/" + tile.pixTileY; }
 
         #region IMapTileProvider Members
 
@@ -261,7 +331,7 @@ namespace Lofas.SportsTracks.Hitta_SE_MapProvider
         /// </summary>
         public Guid Id
         {
-            get { return m_GUID; }
+            get { return m_providerInfo.GUID; }
         }
 
         /// <summary>
@@ -277,7 +347,7 @@ namespace Lofas.SportsTracks.Hitta_SE_MapProvider
         /// </summary>
         public double MaximumZoom
         {
-            get { return m_maximumZoom; }
+            get { return m_providerInfo.MaximumZoom; }
         }
 
         /// <summary>        
@@ -285,7 +355,7 @@ namespace Lofas.SportsTracks.Hitta_SE_MapProvider
         /// </summary>
         public double MinimumZoom
         {
-            get { return m_minimumZoom; }
+            get { return m_providerInfo.MinimumZoom; }
         }
 
         ///<summary>
@@ -293,7 +363,7 @@ namespace Lofas.SportsTracks.Hitta_SE_MapProvider
         ///</summary>
         public string Name
         {
-            get { return m_Name; }
+            get { return m_providerInfo.Name; }
         }
 
         ///<summary>
@@ -364,19 +434,19 @@ namespace Lofas.SportsTracks.Hitta_SE_MapProvider
         /// <summary>
         /// Get information about map tiles
         /// </summary>
-        private IEnumerable<MapTileInfo> GetTileInfo(Rectangle drawRect, double zoom, IGPSLocation center)
+        private IEnumerable<MapTileInfo> GetTileInfo(Rectangle drawRect, double zoomST, IGPSLocation center)
         {
             IList<MapTileInfo> tiles = new List<MapTileInfo>();
 
             // Convert the zoom level to match the zoom-levels of the map provider.
-            double zoomLevel = MAX_ZOOMLEVEL - zoom;
+            double zoomProvider = this.m_providerInfo.MAX_ZOOMLEVEL - zoomST;
 
             if (HittaEniroMapProjection.IsValidLocation(center))
             {
-                long xTileOfCenter = m_MapProjection.XTile(center.LongitudeDegrees, zoomLevel);
-                long yTileOfCenter = m_MapProjection.YTile(center.LatitudeDegrees, zoomLevel);
-                var xPixelOfCenter = m_MapProjection.Xpixel(center.LongitudeDegrees, zoomLevel);
-                var yPixelOfCenter = m_MapProjection.Ypixel(center.LatitudeDegrees, zoomLevel);
+                long xTileOfCenter = m_MapProjection.XTile(center.LongitudeDegrees, zoomProvider);
+                long yTileOfCenter = m_MapProjection.YTile(center.LatitudeDegrees, zoomProvider);
+                var xPixelOfCenter = m_MapProjection.Xpixel(center.LongitudeDegrees, zoomProvider);
+                var yPixelOfCenter = m_MapProjection.Ypixel(center.LatitudeDegrees, zoomProvider);
                 var xPixelOfNWCornerCenterTile = m_MapProjection.PixelOfNorthWestCornerOfTile(xTileOfCenter);
                 var yPixelOfNWCornerCenterTile = m_MapProjection.PixelOfNorthWestCornerOfTile(yTileOfCenter);
 
@@ -389,25 +459,25 @@ namespace Lofas.SportsTracks.Hitta_SE_MapProvider
                                                                             yPixelOffsetCenterVsNWCornerOfCenterTile;
 
                 var noOfTilesToBeDrawnToTheLeftOfCenterTile =
-                    (int)Math.Ceiling((double)xPixelsFromLeftEdgeOfDrawingAreaToLeftEdgeOfCenterTile / TILE_SIZE);
+                    (int)Math.Ceiling((double)xPixelsFromLeftEdgeOfDrawingAreaToLeftEdgeOfCenterTile / this.m_providerInfo.TILE_SIZE);
                 var noOfTilesToBeDrawnAboveOfCenterTile =
-                    (int)Math.Ceiling((double)yPixelsFromTopEdgeOfDrawingAreaToTopEdgeOfCenterTile / TILE_SIZE);
+                    (int)Math.Ceiling((double)yPixelsFromTopEdgeOfDrawingAreaToTopEdgeOfCenterTile / this.m_providerInfo.TILE_SIZE);
 
                 var xNWStartPixel = xPixelsFromLeftEdgeOfDrawingAreaToLeftEdgeOfCenterTile -
-                                     (TILE_SIZE * noOfTilesToBeDrawnToTheLeftOfCenterTile);
+                                     (this.m_providerInfo.TILE_SIZE * noOfTilesToBeDrawnToTheLeftOfCenterTile);
                 var yNWStartPixel = yPixelsFromTopEdgeOfDrawingAreaToTopEdgeOfCenterTile -
-                                     (TILE_SIZE * noOfTilesToBeDrawnAboveOfCenterTile);
+                                     (this.m_providerInfo.TILE_SIZE * noOfTilesToBeDrawnAboveOfCenterTile);
 
-                var noOfTilesToBeDrawnHorizontally = (int)Math.Ceiling((double)drawRect.Width / TILE_SIZE + 1);
-                var noOfTilesToBeDrawnVertically = (int)Math.Ceiling((double)drawRect.Height / TILE_SIZE + 1);
+                var noOfTilesToBeDrawnHorizontally = (int)Math.Ceiling((double)drawRect.Width / this.m_providerInfo.TILE_SIZE + 1);
+                var noOfTilesToBeDrawnVertically = (int)Math.Ceiling((double)drawRect.Height / this.m_providerInfo.TILE_SIZE + 1);
                 var startXTile = xTileOfCenter - noOfTilesToBeDrawnToTheLeftOfCenterTile;
                 var startYTile = yTileOfCenter - noOfTilesToBeDrawnAboveOfCenterTile;
 
                 // Calculation to find out which region to be invalidated
                 var northWestPoint = new Point(-drawRect.Width / 2, -drawRect.Height / 2);
                 var southEastPoint = new Point(drawRect.Width / 2, drawRect.Height / 2);
-                var northWestLocation = m_MapProjection.PixelToGPS(center, zoom, northWestPoint);
-                var southEastLocation = m_MapProjection.PixelToGPS(center, zoom, southEastPoint);
+                var northWestLocation = m_MapProjection.PixelToGPS(center, zoomST, northWestPoint);
+                var southEastLocation = m_MapProjection.PixelToGPS(center, zoomST, southEastPoint);
                 var regionToBeInvalidated = new GPSBounds(northWestLocation, southEastLocation);
 
                 // We have calculated the start tile, that is the tile in the north-west corner of the drawing area. 
@@ -418,11 +488,11 @@ namespace Lofas.SportsTracks.Hitta_SE_MapProvider
                     {
                         long tileXToBeDrawn = startXTile + x;
                         long tileYToBeDrawn = startYTile + y;
-                        long tileYToBeDrawnProvider = (long)Math.Pow(2, zoomLevel) - 1 - tileYToBeDrawn;
-                        long ix = xNWStartPixel + x * TILE_SIZE;
-                        long iy = yNWStartPixel + y * TILE_SIZE;
+                        long tileYToBeDrawnProvider = (long)Math.Pow(2, zoomProvider) - 1 - tileYToBeDrawn;
+                        long ix = xNWStartPixel + x * this.m_providerInfo.TILE_SIZE;
+                        long iy = yNWStartPixel + y * this.m_providerInfo.TILE_SIZE;
 
-                        tiles.Add(new MapTileInfo(ix, iy, tileXToBeDrawn, tileYToBeDrawnProvider, zoomLevel, TILE_SIZE, TILE_SIZE, regionToBeInvalidated));
+                        tiles.Add(new MapTileInfo(ix, iy, tileXToBeDrawn, tileYToBeDrawnProvider, zoomProvider, this.m_providerInfo.TILE_SIZE, this.m_providerInfo.TILE_SIZE, regionToBeInvalidated));
                     }
                 }
             }
@@ -460,7 +530,14 @@ namespace Lofas.SportsTracks.Hitta_SE_MapProvider
                     {
                         string url = tileUrl(queueInfo.tileInfo);
 
-                        STWebClient.Instance.Headers["User-Agent"] = "Mozilla/5.0 (Windows NT 6.3; WOW64; rv:37.0) Gecko/20100101 Firefox/37.0";
+                        if (!string.IsNullOrEmpty(this.m_providerInfo.HttpUserAgent))
+                        {
+                            STWebClient.Instance.Headers["User-Agent"] = this.m_providerInfo.HttpUserAgent;
+                        }
+                        if (!string.IsNullOrEmpty(this.m_providerInfo.HttpAuthToken))
+                        {
+                            STWebClient.Instance.Headers["Authorization"] = this.m_providerInfo.HttpAuthToken;
+                        }
                         Image img = Image.FromStream(STWebClient.Instance.OpenRead(url));
                         img.Save(GetFilePath(queueInfo.tileInfo.pixTileX, queueInfo.tileInfo.pixTileY, queueInfo.tileInfo.zoomlevel, true));
                         img.Dispose();
@@ -470,6 +547,7 @@ namespace Lofas.SportsTracks.Hitta_SE_MapProvider
                 // Invalidate the region of the drawing area
                 m_operOnMainThread.Post(new SendOrPostCallback(InvalidateRegion), queueInfo);
             }
+#pragma warning disable 0168
             catch (Exception e)
             {
             }
@@ -519,10 +597,10 @@ namespace Lofas.SportsTracks.Hitta_SE_MapProvider
         /// <returns></returns>
         private string GetFilePath(long xTile, long yTile, double zoomLevel, bool createDir)
         {
-            string downloadDir = Path.Combine(m_CacheDirectory, zoomLevel.ToString());
+            string downloadDir = Path.Combine(m_providerInfo.CacheDirectory, zoomLevel.ToString());
             if (createDir && !Directory.Exists(downloadDir))
                 Directory.CreateDirectory(downloadDir);
-            return Path.Combine(downloadDir, xTile + "_" + yTile + m_ImageExtension);
+            return Path.Combine(downloadDir, xTile + "_" + yTile + m_providerInfo.ImageExtension);
         }
 
         /// <summary>
@@ -562,7 +640,7 @@ namespace Lofas.SportsTracks.Hitta_SE_MapProvider
                 {
                 }
 
-                return new Bitmap(TILE_SIZE, TILE_SIZE);
+                return new Bitmap(this.m_providerInfo.TILE_SIZE, this.m_providerInfo.TILE_SIZE);
             }
         }
 
@@ -590,12 +668,12 @@ namespace Lofas.SportsTracks.Hitta_SE_MapProvider
 
         public double MaxZoomLevel
         {
-            get { return MaximumZoom; }
+            get { return m_providerInfo.MaximumZoom; }
         }
 
         public double MinZoomLevel
         {
-            get { return MinimumZoom; }
+            get { return m_providerInfo.MinimumZoom; }
         }
         public bool FractionalZoom
         {

@@ -67,6 +67,11 @@ namespace Lofas.SportsTracks.Hitta_SE_MapProvider
                     m_List.Add(new HittaEniroMapProvider(SwedishMapProvider.Hitta, MapViewType.Map));
                     m_List.Add(new HittaEniroMapProvider(SwedishMapProvider.Hitta, MapViewType.Aerial));
                     m_List.Add(new HittaEniroMapProvider(SwedishMapProvider.Hitta, MapViewType.Terrain));
+                    HittaEniroMapProvider lm = new HittaEniroMapProvider(SwedishMapProvider.Lantmateriet, MapViewType.Terrain);
+                    if (lm.Configured)
+                    {
+                        m_List.Add(lm);
+                    }
                 }
                 return m_List; 
             }

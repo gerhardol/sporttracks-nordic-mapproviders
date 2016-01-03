@@ -1,5 +1,6 @@
 ﻿/*
 Copyright (C) 2008, 2009, 2010 Peter Löfås
+Copyright (C) 2008, 2009, 2015 Gerhard Olsson
 
 This library is free software; you can redistribute it and/or
 modify it under the terms of the GNU Lesser General Public
@@ -33,31 +34,36 @@ namespace Lofas.SportsTracks.Hitta_SE_MapProvider
         // Då ska vi räkna ut vilken punkt gpspositionen med utgångspunkt från originalpositionen. 
         // Följande GPS-pos skickas in 60,63974;16,96524 och det ger punkten -186;-65
 
-        private const int MAX_ZOOMLEVEL = 20;
-        private const int TILE_WIDTH = 256;
+        private readonly int MAX_ZOOMLEVEL;
+        private readonly int TILE_SIZE;
 
+        public HittaEniroMapProjection(int maxZoom, int tileWidth)
+        {
+            MAX_ZOOMLEVEL = maxZoom;
+            TILE_SIZE = tileWidth;
+        }
         #region IMapProjection Members
 
         ///<summary>
         ///     Given a GPS location, translate it to a pixel relative to the origin.
         ///</summary>
         ///<param name="origin">The GPS location at pixel location (0,0).</param>
-        ///<param name="zoomLevel">The current zoom level.</param>
+        ///<param name="zoomST">The current zoom level.</param>
         ///<param name="gps">The GPS location.</param>
         ///<returns>
         ///The pixel point.
         ///</returns>
-        public Point GPSToPixel(IGPSLocation origin, double zoomLevel, IGPSLocation gps)
+        public Point GPSToPixel(IGPSLocation origin, double zoomST, IGPSLocation gps)
         {
-            zoomLevel = MAX_ZOOMLEVEL - zoomLevel;
+            double zoom = MAX_ZOOMLEVEL - zoomST;
             long dx;
             long dy;
             try
             {
-                long originX = Xpixel(origin.LongitudeDegrees, zoomLevel);
-                long originY = Ypixel(origin.LatitudeDegrees, zoomLevel);
-                long gpsX = Xpixel(gps.LongitudeDegrees, zoomLevel);
-                long gpsY = Ypixel(gps.LatitudeDegrees, zoomLevel);
+                long originX = Xpixel(origin.LongitudeDegrees, zoom);
+                long originY = Ypixel(origin.LatitudeDegrees, zoom);
+                long gpsX = Xpixel(gps.LongitudeDegrees, zoom);
+                long gpsY = Ypixel(gps.LatitudeDegrees, zoom);
 
                 dx = gpsX - originX;
                 dy = gpsY - originY;
@@ -79,34 +85,34 @@ namespace Lofas.SportsTracks.Hitta_SE_MapProvider
         ///</summary>
         ///
         ///<param name="origin">The GPS location at pixel location (0,0).</param>
-        ///<param name="zoomLevel">The current zoom level.</param>
+        ///<param name="zoomST">The current zoom level.</param>
         ///<param name="pixel">The pixel point.</param>
         ///<returns>
         ///The GPS location.
         ///</returns>
-        public IGPSLocation PixelToGPS(IGPSLocation origin, double zoomLevel, Point pixel)
+        public IGPSLocation PixelToGPS(IGPSLocation origin, double zoomST, Point pixel)
         {
-            zoomLevel = MAX_ZOOMLEVEL - zoomLevel;
+            double zoom = MAX_ZOOMLEVEL - zoomST;
             float latitude;
             float longitude;
             try
             {
-                long originX = Xpixel(origin.LongitudeDegrees, zoomLevel);
-                long originY = Ypixel(origin.LatitudeDegrees, zoomLevel);
+                long originX = Xpixel(origin.LongitudeDegrees, zoom);
+                long originY = Ypixel(origin.LatitudeDegrees, zoom);
 
                 long pixelX = originX + pixel.X;
                 long pixelY = originY + pixel.Y;
 
-                latitude = YToLatitude(pixelY, zoomLevel);
-                longitude = XToLongitude(pixelX, zoomLevel);
+                latitude = YToLatitude(pixelY, zoom);
+                longitude = XToLongitude(pixelX, zoom);
             }
             catch (Exception e)
             {
                 Debug.Print(e.Message);
                 //throw e;
                 //Avoid exception when 
-                latitude = origin.LatitudeDegrees + (float)(pixel.Y*zoomLevel/20000);
-                longitude = origin.LongitudeDegrees + (float)(pixel.X * zoomLevel / 20000);
+                latitude = origin.LatitudeDegrees + (float)(pixel.Y*zoom/20000);
+                longitude = origin.LongitudeDegrees + (float)(pixel.X * zoom / 20000);
             }
             return new GPSLocation(latitude, longitude);
         }
@@ -128,7 +134,7 @@ namespace Lofas.SportsTracks.Hitta_SE_MapProvider
 
             // Instead of -180 to +180, we want 0 to 360
             double dlng = longitude + 180;
-            double dxpixel = dlng / 360.0 * TILE_WIDTH * Math.Pow(2, zoom);
+            double dxpixel = dlng / 360.0 * TILE_SIZE * Math.Pow(2, zoom);
             long xpixel = Convert.ToInt32(Math.Floor(dxpixel));
             return xpixel;
         }
@@ -150,7 +156,7 @@ namespace Lofas.SportsTracks.Hitta_SE_MapProvider
 
             // PI/360 == degrees -&gt; radians
             // The trig functions are done with radians
-            double dypixel = TILE_WIDTH * (ypixelcenter - Math.Log(Math.Tan(latitude * Math.PI / 360 + Math.PI / 4)) * ypixelcenter / Math.PI);
+            double dypixel = TILE_SIZE * (ypixelcenter - Math.Log(Math.Tan(latitude * Math.PI / 360 + Math.PI / 4)) * ypixelcenter / Math.PI);
             long ypixel = Convert.ToInt32(Math.Floor(dypixel));
             return ypixel;
         }
@@ -163,7 +169,7 @@ namespace Lofas.SportsTracks.Hitta_SE_MapProvider
         /// <returns></returns>
         public int XTile(double longitude, double zoom)
         {
-            return Convert.ToInt32(Math.Floor((double)Xpixel(longitude, zoom) / TILE_WIDTH));
+            return Convert.ToInt32(Math.Floor((double)Xpixel(longitude, zoom) / TILE_SIZE));
         }
 
         /// <summary>
@@ -174,7 +180,7 @@ namespace Lofas.SportsTracks.Hitta_SE_MapProvider
         /// <returns></returns>
         public int YTile(double latitude, double zoom)
         {
-            return Convert.ToInt32(Math.Floor((double)Ypixel(latitude, zoom) / TILE_WIDTH));
+            return Convert.ToInt32(Math.Floor((double)Ypixel(latitude, zoom) / TILE_SIZE));
         }
 
         /// <summary>
@@ -184,7 +190,7 @@ namespace Lofas.SportsTracks.Hitta_SE_MapProvider
         /// <returns></returns>
         public long PixelOfNorthWestCornerOfTile(long tile)
         {
-            return tile * TILE_WIDTH;
+            return tile * TILE_SIZE;
         }
 
         /// <summary>
@@ -197,7 +203,7 @@ namespace Lofas.SportsTracks.Hitta_SE_MapProvider
         {
             double w = Math.Pow(2, zoom - 1);
             double dy = Convert.ToDouble(y);
-            double num0 = Math.PI * (w - dy / TILE_WIDTH);
+            double num0 = Math.PI * (w - dy / TILE_SIZE);
             double num1 = Math.Atan(Math.Exp(num0 / w)) - Math.PI / 4;
             double latitude = 360 * num1 / Math.PI;
             return (float)latitude;
@@ -213,7 +219,7 @@ namespace Lofas.SportsTracks.Hitta_SE_MapProvider
         {
             double dx = Convert.ToDouble(X);
 
-            return (float) ((360*dx)/(TILE_WIDTH*Math.Pow(2, zoom)) - 180);
+            return (float) ((360*dx)/(TILE_SIZE*Math.Pow(2, zoom)) - 180);
         }
 
         /// <summary>
@@ -234,7 +240,7 @@ namespace Lofas.SportsTracks.Hitta_SE_MapProvider
         /// <returns></returns>
         public static bool IsValidLocation(double lat, double lon)
         {
-            //Approx Swedish coordinates
+            //Approx Swedish coordinates, really 10.5700, 55.2000, 24.1800, 69.1000, but some stretch
             if (lat < 55 || lat > 72 || lon < 4 || lon > 32)
             {
                 return false;
