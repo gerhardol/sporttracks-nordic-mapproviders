@@ -72,6 +72,7 @@ namespace Lofas.SportsTracks.Hitta_SE_MapProvider
             public readonly string ImageExtension;
             public readonly string CacheDirectory; // Directory where to store the cached tiles
 
+            private readonly string baseUrl;
             public readonly int MAX_ZOOMLEVEL;
             public readonly int TILE_SIZE = 256;
             public readonly string HttpAuthToken;
@@ -85,6 +86,9 @@ namespace Lofas.SportsTracks.Hitta_SE_MapProvider
                 {
                     case SwedishMapProvider.Eniro:
                         {
+                            // Eniro seems to randomly point against one of four different servers. 
+                            // Therefore I do the same and vary between an url of map01..., map02..., map03... and map04...
+                            baseUrl = "http://map0{0}.eniro.com/geowebcache/service/tms1.0.0/{1}/{2}/{3}/{4}{5}";
                             switch (mapViewType)
                             {
                                 case MapViewType.Map:
@@ -123,8 +127,10 @@ namespace Lofas.SportsTracks.Hitta_SE_MapProvider
                             }
                             break;
                         }
+
                     case SwedishMapProvider.Hitta:
                         {
+                            baseUrl = "http://static{0}.hitta.se/tile/v3/{1}/{2}/{3}/{4}{5}";
                             switch (mapViewType)
                             {
                                 case MapViewType.Map:
@@ -163,8 +169,15 @@ namespace Lofas.SportsTracks.Hitta_SE_MapProvider
                             }
                             break;
                         }
+
                     case SwedishMapProvider.Lantmateriet:
                         {
+                            //KVP
+                            //baseUrl += "?SERVICE=WMTS&REQUEST=GetTile&VERSION=1.0.0&LAYER=topowebb&STYLE=default&TILEMATRIXSET=3006&TILEMATRIX={0}&TILEROW={1}&TILECOL={2}&FORMAT=image/png";
+                            //REST
+                            //baseUrl += "1.0.0/topowebb/default/3006/{0}/{1}/{2}.png";
+                            //url = string.Format(baseUrl, tile.zoomlevel, tile.pixTileX, tile.pixTileY);
+                            baseUrl = "https://api{0}.lantmateriet.se/open/topowebb-ccby/v1/wmts/1.0.0/topowebb/{1}/3006/{2}/{4}/{3}{5}";
                             switch (mapViewType)
                             {
                                 case MapViewType.Terrain:
@@ -172,7 +185,7 @@ namespace Lofas.SportsTracks.Hitta_SE_MapProvider
                                         ImageExtension = ".png";
                                         GUID = new Guid("C58C17A9-EF20-4D3E-9791-8D9EB46C4D57");
                                         Name = "Lantmäteriet - Terräng";
-                                        ViewTypeInUrl = "3006";
+                                        ViewTypeInUrl = "default";
                                         mapProviderAbbreviation = "LantmaterietTopo";
                                         MaximumZoom = 12;
                                         MinimumZoom = 3;
@@ -181,10 +194,14 @@ namespace Lofas.SportsTracks.Hitta_SE_MapProvider
                             }
                             break;
                         }
+
+                    default:
+                        throw new Exception("Unknown provider: " + provider);
                 }
 
                 if (provider == SwedishMapProvider.Lantmateriet)
                 {
+                    //Lantmäteriet Zoomlevel 9 is 8m 
                     MAX_ZOOMLEVEL = 12;
                     //TILE_SIZE = 256;
                     //TBD: Make access key configurable
@@ -207,6 +224,29 @@ namespace Lofas.SportsTracks.Hitta_SE_MapProvider
 #endif
                     Path.DirectorySeparatorChar + mapProviderAbbreviation);
             }
+
+            public string tileUrl(MapTileInfo tile)
+            {
+                string serverIndex;
+                string ext;
+                switch (SwedishMapProvider)
+                {
+                    case SwedishMapProvider.Eniro:
+                        // Random server, see definition
+                        var rnd = new Random();
+                        serverIndex = rnd.Next(1, 5).ToString();
+                        ext = ImageExtension;
+                        break;
+
+                    default:
+                        serverIndex = "";
+                        ext = "";
+                        break;
+                }
+                string url = string.Format(baseUrl, serverIndex, ViewTypeInUrl, tile.zoomlevel, tile.pixTileX, tile.pixTileY, ext);
+                return url;
+            }
+
         }
 
         public bool Configured
@@ -234,46 +274,6 @@ namespace Lofas.SportsTracks.Hitta_SE_MapProvider
             m_DownloadQueueItems = new Dictionary<string, string>();
             m_providerInfo = new ProviderInfo(provider, mapViewType);
             m_MapProjection = new HittaEniroMapProjection(m_providerInfo.MAX_ZOOMLEVEL, m_providerInfo.TILE_SIZE);
-        }
-
-        private string tileUrl(MapTileInfo tile)
-        {
-            string url;
-            switch (m_providerInfo.SwedishMapProvider)
-            {
-                case SwedishMapProvider.Eniro:
-                    // Eniro seems to randomly point against one of four different servers. 
-                    // Therefore I do the same and vary between an url of map01..., map02..., map03... and map04...
-                    var rnd = new Random();
-                    int serverIndex = rnd.Next(1, 5);
-                    string baseUrl =
-                        string.Format(
-                            "http://map0{0}.eniro.com/geowebcache/service/tms1.0.0/",
-                            serverIndex);
-
-                    url = baseUrl + tileId(tile) + m_providerInfo.ImageExtension;
-                    break;
-
-                case SwedishMapProvider.Hitta:
-                    baseUrl = "http://static.hitta.se/tile/v3/";
-                    url = baseUrl + tileId(tile);
-                    break;
-
-                case SwedishMapProvider.Lantmateriet:
-                    baseUrl = "https://api.lantmateriet.se/open/topowebb-ccby/v1/wmts/";
-                    //KVP
-                    //baseUrl += "?SERVICE=WMTS&REQUEST=GetTile&VERSION=1.0.0&LAYER=topowebb&STYLE=default&TILEMATRIXSET=3006&TILEMATRIX={0}&TILEROW={1}&TILECOL={2}&FORMAT=image/png";
-                    //REST
-                    //baseUrl += "1.0.0/topowebb/default/3006/{0}/{1}/{2}.png";
-                    //url = string.Format(baseUrl, tile.zoomlevel, tile.pixTileX, tile.pixTileY);
-                    baseUrl += "1.0.0/topowebb/default/";
-                    url = baseUrl + tileId(tile) + m_providerInfo.ImageExtension;
-                    break;
-
-                default:
-                    throw new Exception("Unknown provider: "+ m_providerInfo.SwedishMapProvider);
-            }
-            return url;
         }
 
         //Eniro/Hitta has the same type of identification
@@ -528,16 +528,24 @@ namespace Lofas.SportsTracks.Hitta_SE_MapProvider
                 {
                     if (m_DownloadQueueItems.ContainsKey(tileId(queueInfo.tileInfo)))
                     {
-                        string url = tileUrl(queueInfo.tileInfo);
-
                         if (!string.IsNullOrEmpty(this.m_providerInfo.HttpUserAgent))
                         {
                             STWebClient.Instance.Headers["User-Agent"] = this.m_providerInfo.HttpUserAgent;
+                        }
+                        else
+                        {
+                            STWebClient.Instance.Headers.Remove("User-Agent");
                         }
                         if (!string.IsNullOrEmpty(this.m_providerInfo.HttpAuthToken))
                         {
                             STWebClient.Instance.Headers["Authorization"] = this.m_providerInfo.HttpAuthToken;
                         }
+                        else
+                        {
+                            STWebClient.Instance.Headers.Remove("Authorization");
+                        }
+
+                        string url = this.m_providerInfo.tileUrl(queueInfo.tileInfo);
                         Image img = Image.FromStream(STWebClient.Instance.OpenRead(url));
                         img.Save(GetFilePath(queueInfo.tileInfo.pixTileX, queueInfo.tileInfo.pixTileY, queueInfo.tileInfo.zoomlevel, true));
                         img.Dispose();
