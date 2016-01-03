@@ -130,7 +130,7 @@ namespace Lofas.SportsTracks.Hitta_SE_MapProvider
 
                     case SwedishMapProvider.Hitta:
                         {
-                            baseUrl = "http://static{0}.hitta.se/tile/v3/{1}/{2}/{3}/{4}{5}";
+                            baseUrl = "http://static.hitta.se/tile/v3/{1}/{2}/{3}/{4}";
                             switch (mapViewType)
                             {
                                 case MapViewType.Map:
@@ -177,7 +177,7 @@ namespace Lofas.SportsTracks.Hitta_SE_MapProvider
                             //REST
                             //baseUrl += "1.0.0/topowebb/default/3006/{0}/{1}/{2}.png";
                             //url = string.Format(baseUrl, tile.zoomlevel, tile.pixTileX, tile.pixTileY);
-                            baseUrl = "https://api{0}.lantmateriet.se/open/topowebb-ccby/v1/wmts/1.0.0/topowebb/{1}/3006/{2}/{4}/{3}{5}";
+                            baseUrl = "https://api.lantmateriet.se/open/topowebb-ccby/v1/wmts/1.0.0/topowebb/{1}/3006/{2}/{3}/{4}{5}";
                             switch (mapViewType)
                             {
                                 case MapViewType.Terrain:
@@ -305,7 +305,7 @@ namespace Lofas.SportsTracks.Hitta_SE_MapProvider
             int numberOfTilesQueued = 0;
             if (HittaEniroMapProjection.IsValidLocation(center))
             {
-                foreach (MapTileInfo t in GetTileInfo(drawRect, zoom, center))
+                foreach (MapTileInfo t in this.m_MapProjection.GetTileInfo(drawRect, zoom, center))
                 {
                     // Find out if the tile is cached on disk or needs to be downloaded from the map provider.
                     if (IsCached(t.pixTileX, t.pixTileY, t.zoomlevel))
@@ -377,7 +377,7 @@ namespace Lofas.SportsTracks.Hitta_SE_MapProvider
         {
             if (HittaEniroMapProjection.IsValidLocation(center))
             {
-                foreach (MapTileInfo t in GetTileInfo(drawRectangle, zoomLevel, center))
+                foreach (MapTileInfo t in this.m_MapProjection.GetTileInfo(drawRectangle, zoomLevel, center))
                 {
                     if (IsCached(t.pixTileX, t.pixTileY, t.zoomlevel))
                     {
@@ -408,7 +408,7 @@ namespace Lofas.SportsTracks.Hitta_SE_MapProvider
         /// <summary>
         /// Wrap information about tiles
         /// </summary>
-        private class MapTileInfo
+        public class MapTileInfo
         {
             public MapTileInfo(long iTileX, long iTileY, long pixTileX, long pixTileY, double zoomlevel, int widthX, int heightY, IGPSBounds regionToBeInvalidated)
             {
@@ -430,75 +430,6 @@ namespace Lofas.SportsTracks.Hitta_SE_MapProvider
             public readonly int heightY;
             public readonly IGPSBounds regionToBeInvalidated;
        }
-
-        /// <summary>
-        /// Get information about map tiles
-        /// </summary>
-        private IEnumerable<MapTileInfo> GetTileInfo(Rectangle drawRect, double zoomST, IGPSLocation center)
-        {
-            IList<MapTileInfo> tiles = new List<MapTileInfo>();
-
-            // Convert the zoom level to match the zoom-levels of the map provider.
-            double zoomProvider = this.m_providerInfo.MAX_ZOOMLEVEL - zoomST;
-
-            if (HittaEniroMapProjection.IsValidLocation(center))
-            {
-                long xTileOfCenter = m_MapProjection.XTile(center.LongitudeDegrees, zoomProvider);
-                long yTileOfCenter = m_MapProjection.YTile(center.LatitudeDegrees, zoomProvider);
-                var xPixelOfCenter = m_MapProjection.Xpixel(center.LongitudeDegrees, zoomProvider);
-                var yPixelOfCenter = m_MapProjection.Ypixel(center.LatitudeDegrees, zoomProvider);
-                var xPixelOfNWCornerCenterTile = m_MapProjection.PixelOfNorthWestCornerOfTile(xTileOfCenter);
-                var yPixelOfNWCornerCenterTile = m_MapProjection.PixelOfNorthWestCornerOfTile(yTileOfCenter);
-
-                var xPixelOffsetCenterVsNWCornerOfCenterTile = xPixelOfCenter - xPixelOfNWCornerCenterTile;
-                var yPixelOffsetCenterVsNWCornerOfCenterTile = yPixelOfCenter - yPixelOfNWCornerCenterTile;
-
-                var xPixelsFromLeftEdgeOfDrawingAreaToLeftEdgeOfCenterTile = (drawRect.Width / 2) -
-                                                                              xPixelOffsetCenterVsNWCornerOfCenterTile;
-                var yPixelsFromTopEdgeOfDrawingAreaToTopEdgeOfCenterTile = (drawRect.Height / 2) -
-                                                                            yPixelOffsetCenterVsNWCornerOfCenterTile;
-
-                var noOfTilesToBeDrawnToTheLeftOfCenterTile =
-                    (int)Math.Ceiling((double)xPixelsFromLeftEdgeOfDrawingAreaToLeftEdgeOfCenterTile / this.m_providerInfo.TILE_SIZE);
-                var noOfTilesToBeDrawnAboveOfCenterTile =
-                    (int)Math.Ceiling((double)yPixelsFromTopEdgeOfDrawingAreaToTopEdgeOfCenterTile / this.m_providerInfo.TILE_SIZE);
-
-                var xNWStartPixel = xPixelsFromLeftEdgeOfDrawingAreaToLeftEdgeOfCenterTile -
-                                     (this.m_providerInfo.TILE_SIZE * noOfTilesToBeDrawnToTheLeftOfCenterTile);
-                var yNWStartPixel = yPixelsFromTopEdgeOfDrawingAreaToTopEdgeOfCenterTile -
-                                     (this.m_providerInfo.TILE_SIZE * noOfTilesToBeDrawnAboveOfCenterTile);
-
-                var noOfTilesToBeDrawnHorizontally = (int)Math.Ceiling((double)drawRect.Width / this.m_providerInfo.TILE_SIZE + 1);
-                var noOfTilesToBeDrawnVertically = (int)Math.Ceiling((double)drawRect.Height / this.m_providerInfo.TILE_SIZE + 1);
-                var startXTile = xTileOfCenter - noOfTilesToBeDrawnToTheLeftOfCenterTile;
-                var startYTile = yTileOfCenter - noOfTilesToBeDrawnAboveOfCenterTile;
-
-                // Calculation to find out which region to be invalidated
-                var northWestPoint = new Point(-drawRect.Width / 2, -drawRect.Height / 2);
-                var southEastPoint = new Point(drawRect.Width / 2, drawRect.Height / 2);
-                var northWestLocation = m_MapProjection.PixelToGPS(center, zoomST, northWestPoint);
-                var southEastLocation = m_MapProjection.PixelToGPS(center, zoomST, southEastPoint);
-                var regionToBeInvalidated = new GPSBounds(northWestLocation, southEastLocation);
-
-                // We have calculated the start tile, that is the tile in the north-west corner of the drawing area. 
-                // Now we will iterate left to right and top to bottom so that all tiles is either drawn or downloaded.
-                for (var x = 0; x < noOfTilesToBeDrawnHorizontally; x++)
-                {
-                    for (var y = 0; y < noOfTilesToBeDrawnVertically; y++)
-                    {
-                        long tileXToBeDrawn = startXTile + x;
-                        long tileYToBeDrawn = startYTile + y;
-                        long tileYToBeDrawnProvider = (long)Math.Pow(2, zoomProvider) - 1 - tileYToBeDrawn;
-                        long ix = xNWStartPixel + x * this.m_providerInfo.TILE_SIZE;
-                        long iy = yNWStartPixel + y * this.m_providerInfo.TILE_SIZE;
-
-                        tiles.Add(new MapTileInfo(ix, iy, tileXToBeDrawn, tileYToBeDrawnProvider, zoomProvider, this.m_providerInfo.TILE_SIZE, this.m_providerInfo.TILE_SIZE, regionToBeInvalidated));
-                    }
-                }
-            }
-
-            return tiles;
-        }
 
         /// <summary>
         /// This method downloads a tile and saves it to disk.

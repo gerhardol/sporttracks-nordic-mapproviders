@@ -20,6 +20,7 @@ using System;
 using System.Diagnostics;
 using System.Drawing;
 using ZoneFiveSoftware.Common.Data.GPS;
+using System.Collections.Generic;
 #if ST_2_1
 using ZoneFiveSoftware.Common.Visuals.Fitness.GPS;
 #else
@@ -220,6 +221,75 @@ namespace Lofas.SportsTracks.Hitta_SE_MapProvider
             double dx = Convert.ToDouble(X);
 
             return (float) ((360*dx)/(TILE_SIZE*Math.Pow(2, zoom)) - 180);
+        }
+
+        /// <summary>
+        /// Get information about map tiles
+        /// </summary>
+        public IEnumerable<HittaEniroMapProvider.MapTileInfo> GetTileInfo(Rectangle drawRect, double zoomST, IGPSLocation center)
+        {
+            IList<HittaEniroMapProvider.MapTileInfo> tiles = new List<HittaEniroMapProvider.MapTileInfo>();
+
+            // Convert the zoom level to match the zoom-levels of the map provider.
+            double zoomProvider = this.MAX_ZOOMLEVEL - zoomST;
+
+            if (HittaEniroMapProjection.IsValidLocation(center))
+            {
+                long xTileOfCenter = XTile(center.LongitudeDegrees, zoomProvider);
+                long yTileOfCenter = YTile(center.LatitudeDegrees, zoomProvider);
+                var xPixelOfCenter = Xpixel(center.LongitudeDegrees, zoomProvider);
+                var yPixelOfCenter = Ypixel(center.LatitudeDegrees, zoomProvider);
+                var xPixelOfNWCornerCenterTile = PixelOfNorthWestCornerOfTile(xTileOfCenter);
+                var yPixelOfNWCornerCenterTile = PixelOfNorthWestCornerOfTile(yTileOfCenter);
+
+                var xPixelOffsetCenterVsNWCornerOfCenterTile = xPixelOfCenter - xPixelOfNWCornerCenterTile;
+                var yPixelOffsetCenterVsNWCornerOfCenterTile = yPixelOfCenter - yPixelOfNWCornerCenterTile;
+
+                var xPixelsFromLeftEdgeOfDrawingAreaToLeftEdgeOfCenterTile = (drawRect.Width / 2) -
+                                                                              xPixelOffsetCenterVsNWCornerOfCenterTile;
+                var yPixelsFromTopEdgeOfDrawingAreaToTopEdgeOfCenterTile = (drawRect.Height / 2) -
+                                                                            yPixelOffsetCenterVsNWCornerOfCenterTile;
+
+                var noOfTilesToBeDrawnToTheLeftOfCenterTile =
+                    (int)Math.Ceiling((double)xPixelsFromLeftEdgeOfDrawingAreaToLeftEdgeOfCenterTile / this.TILE_SIZE);
+                var noOfTilesToBeDrawnAboveOfCenterTile =
+                    (int)Math.Ceiling((double)yPixelsFromTopEdgeOfDrawingAreaToTopEdgeOfCenterTile / this.TILE_SIZE);
+
+                var xNWStartPixel = xPixelsFromLeftEdgeOfDrawingAreaToLeftEdgeOfCenterTile -
+                                     (this.TILE_SIZE * noOfTilesToBeDrawnToTheLeftOfCenterTile);
+                var yNWStartPixel = yPixelsFromTopEdgeOfDrawingAreaToTopEdgeOfCenterTile -
+                                     (this.TILE_SIZE * noOfTilesToBeDrawnAboveOfCenterTile);
+
+                var noOfTilesToBeDrawnHorizontally = (int)Math.Ceiling((double)drawRect.Width / this.TILE_SIZE + 1);
+                var noOfTilesToBeDrawnVertically = (int)Math.Ceiling((double)drawRect.Height / this.TILE_SIZE + 1);
+                var startXTile = xTileOfCenter - noOfTilesToBeDrawnToTheLeftOfCenterTile;
+                var startYTile = yTileOfCenter - noOfTilesToBeDrawnAboveOfCenterTile;
+
+                // Calculation to find out which region to be invalidated
+                var northWestPoint = new Point(-drawRect.Width / 2, -drawRect.Height / 2);
+                var southEastPoint = new Point(drawRect.Width / 2, drawRect.Height / 2);
+                var northWestLocation = PixelToGPS(center, zoomST, northWestPoint);
+                var southEastLocation = PixelToGPS(center, zoomST, southEastPoint);
+                var regionToBeInvalidated = new GPSBounds(northWestLocation, southEastLocation);
+
+                // We have calculated the start tile, that is the tile in the north-west corner of the drawing area. 
+                // Now we will iterate left to right and top to bottom so that all tiles is either drawn or downloaded.
+                for (var x = 0; x < noOfTilesToBeDrawnHorizontally; x++)
+                {
+                    for (var y = 0; y < noOfTilesToBeDrawnVertically; y++)
+                    {
+                        long tileXToBeDrawn = startXTile + x;
+                        long tileYToBeDrawn = startYTile + y;
+                        long tileYToBeDrawnProvider = (long)Math.Pow(2, zoomProvider) - 1 - tileYToBeDrawn;
+                        long ix = xNWStartPixel + x * this.TILE_SIZE;
+                        long iy = yNWStartPixel + y * this.TILE_SIZE;
+
+                        tiles.Add(new HittaEniroMapProvider.MapTileInfo(ix, iy, tileXToBeDrawn, tileYToBeDrawnProvider, zoomProvider, this.TILE_SIZE, this.TILE_SIZE, regionToBeInvalidated));
+                    }
+                }
+            }
+
+            return tiles;
         }
 
         /// <summary>
