@@ -201,11 +201,11 @@ namespace Lofas.SportsTracks.Hitta_SE_MapProvider
 
                 if (provider == SwedishMapProvider.Lantmateriet)
                 {
-                    //Lantmäteriet Zoomlevel 9 is 8m 
-                    MAX_ZOOMLEVEL = 12;
+                    //Lantmäteriet Zoomlevel 9 is 8m (2^3)
+                    MAX_ZOOMLEVEL = this.MinimumZoom + 3;
                     //TILE_SIZE = 256;
                     //TBD: Make access key configurable
-                    HttpAuthToken = "";// "Bearer " + "";
+                    HttpAuthToken = "";//"Bearer " + "";
                     HttpUserAgent = "";
                 }
                 else
@@ -243,7 +243,7 @@ namespace Lofas.SportsTracks.Hitta_SE_MapProvider
                         ext = "";
                         break;
                 }
-                string url = string.Format(baseUrl, serverIndex, ViewTypeInUrl, tile.zoomlevel, tile.pixTileX, tile.pixTileY, ext);
+                string url = string.Format(baseUrl, serverIndex, ViewTypeInUrl, tile.provZoom, tile.provTileX, tile.provTileY, ext);
                 return url;
             }
 
@@ -277,7 +277,7 @@ namespace Lofas.SportsTracks.Hitta_SE_MapProvider
         }
 
         //Eniro/Hitta has the same type of identification
-        private string tileId(MapTileInfo tile) { return m_providerInfo.ViewTypeInUrl + "/" + tile.zoomlevel + "/" + tile.pixTileX + "/" + tile.pixTileY; }
+        private string tileId(MapTileInfo tile) { return m_providerInfo.ViewTypeInUrl + "/" + tile.provZoom + "/" + tile.provTileX + "/" + tile.provTileY; }
 
         #region IMapTileProvider Members
 
@@ -308,9 +308,9 @@ namespace Lofas.SportsTracks.Hitta_SE_MapProvider
                 foreach (MapTileInfo t in this.m_MapProjection.GetTileInfo(drawRect, zoom, center))
                 {
                     // Find out if the tile is cached on disk or needs to be downloaded from the map provider.
-                    if (IsCached(t.pixTileX, t.pixTileY, t.zoomlevel))
+                    if (IsCached(t.provZoom, t.provTileX, t.provTileY))
                     {
-                        Image img = GetImageFromCache(t.pixTileX, t.pixTileY, t.zoomlevel);
+                        Image img = GetImageFromCache(t.provZoom, t.provTileX, t.provTileY);
                         graphics.DrawImage(img, t.iTileX, t.iTileY, t.widthX, t.heightY);
                         img.Dispose();
                     }
@@ -379,9 +379,9 @@ namespace Lofas.SportsTracks.Hitta_SE_MapProvider
             {
                 foreach (MapTileInfo t in this.m_MapProjection.GetTileInfo(drawRectangle, zoomLevel, center))
                 {
-                    if (IsCached(t.pixTileX, t.pixTileY, t.zoomlevel))
+                    if (IsCached(t.provZoom, t.provTileX, t.provTileY))
                     {
-                        string str = GetFilePath(t.pixTileX, t.pixTileY, t.zoomlevel);
+                        string str = GetFilePath(t.provZoom, t.provTileX, t.provTileY);
 
                         try
                         {
@@ -410,22 +410,22 @@ namespace Lofas.SportsTracks.Hitta_SE_MapProvider
         /// </summary>
         public class MapTileInfo
         {
-            public MapTileInfo(long iTileX, long iTileY, long pixTileX, long pixTileY, double zoomlevel, int widthX, int heightY, IGPSBounds regionToBeInvalidated)
+            public MapTileInfo(double provZoom, long provTileX, long provTileY, long iTileX, long iTileY, int widthX, int heightY, IGPSBounds regionToBeInvalidated)
             {
+                this.provZoom = provZoom;
+                this.provTileX = provTileX;
+                this.provTileY = provTileY;
                 this.iTileX = iTileX;
                 this.iTileY = iTileY;
-                this.pixTileX = pixTileX;
-                this.pixTileY = pixTileY;
-                this.zoomlevel = zoomlevel;
                 this.widthX = widthX;
                 this.heightY = heightY;
                 this.regionToBeInvalidated = regionToBeInvalidated;
             }
+            public readonly double provZoom;
+            public readonly long provTileX;
+            public readonly long provTileY;
             public readonly long iTileX;
             public readonly long iTileY;
-            public readonly long pixTileX;
-            public readonly long pixTileY;
-            public readonly double zoomlevel;
             public readonly int widthX;
             public readonly int heightY;
             public readonly IGPSBounds regionToBeInvalidated;
@@ -478,7 +478,7 @@ namespace Lofas.SportsTracks.Hitta_SE_MapProvider
 
                         string url = this.m_providerInfo.tileUrl(queueInfo.tileInfo);
                         Image img = Image.FromStream(STWebClient.Instance.OpenRead(url));
-                        img.Save(GetFilePath(queueInfo.tileInfo.pixTileX, queueInfo.tileInfo.pixTileY, queueInfo.tileInfo.zoomlevel, true));
+                        img.Save(GetFilePath(queueInfo.tileInfo.provZoom, queueInfo.tileInfo.provTileX, queueInfo.tileInfo.provTileY, true));
                         img.Dispose();
                     }
                 }
@@ -521,9 +521,9 @@ namespace Lofas.SportsTracks.Hitta_SE_MapProvider
         /// <param name="yTile"></param>
         /// <param name="zoomLevel"></param>
         /// <returns></returns>
-        private bool IsCached(long xTile, long yTile, double zoomLevel)
+        private bool IsCached(double zoomLevel, long xTile, long yTile)
         {
-            return File.Exists(GetFilePath(xTile, yTile, zoomLevel));
+            return File.Exists(GetFilePath(zoomLevel, xTile, yTile));
         }
 
         /// <summary>
@@ -534,7 +534,7 @@ namespace Lofas.SportsTracks.Hitta_SE_MapProvider
         /// <param name="zoomLevel"></param>
         /// <param name="createDir"></param>
         /// <returns></returns>
-        private string GetFilePath(long xTile, long yTile, double zoomLevel, bool createDir)
+        private string GetFilePath(double zoomLevel, long xTile, long yTile, bool createDir)
         {
             string downloadDir = Path.Combine(m_providerInfo.CacheDirectory, zoomLevel.ToString());
             if (createDir && !Directory.Exists(downloadDir))
@@ -549,9 +549,9 @@ namespace Lofas.SportsTracks.Hitta_SE_MapProvider
         /// <param name="yTile"></param>
         /// <param name="useZoomLevel"></param>
         /// <returns></returns>
-        private string GetFilePath(long xTile, long yTile, double useZoomLevel)
+        private string GetFilePath(double useZoomLevel, long xTile, long yTile)
         {
-            return GetFilePath(xTile, yTile, useZoomLevel, false);
+            return GetFilePath(useZoomLevel, xTile, yTile, false);
         }
 
         /// <summary>
@@ -561,9 +561,9 @@ namespace Lofas.SportsTracks.Hitta_SE_MapProvider
         /// <param name="yTile"></param>
         /// <param name="zoomLevel"></param>
         /// <returns></returns>
-        private Image GetImageFromCache(long xTile, long yTile, double zoomLevel)
+        private Image GetImageFromCache(double zoomLevel, long xTile, long yTile)
         {
-            var str = GetFilePath(xTile, yTile, zoomLevel);
+            var str = GetFilePath(zoomLevel, xTile, yTile);
 
             try
             {

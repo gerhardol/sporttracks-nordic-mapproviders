@@ -266,11 +266,12 @@ namespace Lofas.SportsTracks.Hitta_SE_MapProvider
                 var startYTile = yTileOfCenter - noOfTilesToBeDrawnAboveOfCenterTile;
 
                 // Calculation to find out which region to be invalidated
-                var northWestPoint = new Point(-drawRect.Width / 2, -drawRect.Height / 2);
-                var southEastPoint = new Point(drawRect.Width / 2, drawRect.Height / 2);
-                var northWestLocation = PixelToGPS(center, zoomST, northWestPoint);
-                var southEastLocation = PixelToGPS(center, zoomST, southEastPoint);
-                var regionToBeInvalidated = new GPSBounds(northWestLocation, southEastLocation);
+                //TBD it would have been natural to have each tile to cover its own area only, but it aint so
+                Point northWestPoint = new Point(-drawRect.Width / 2, -drawRect.Height / 2);
+                Point southEastPoint = new Point(drawRect.Width / 2, drawRect.Height / 2);
+                IGPSLocation northWestLocation = PixelToGPS(center, zoomST, northWestPoint);
+                IGPSLocation southEastLocation = PixelToGPS(center, zoomST, southEastPoint);
+                IGPSBounds regionToBeInvalidated = new GPSBounds(northWestLocation, southEastLocation);
 
                 // We have calculated the start tile, that is the tile in the north-west corner of the drawing area. 
                 // Now we will iterate left to right and top to bottom so that all tiles is either drawn or downloaded.
@@ -284,7 +285,7 @@ namespace Lofas.SportsTracks.Hitta_SE_MapProvider
                         long ix = xNWStartPixel + x * this.TILE_SIZE;
                         long iy = yNWStartPixel + y * this.TILE_SIZE;
 
-                        tiles.Add(new HittaEniroMapProvider.MapTileInfo(ix, iy, tileXToBeDrawn, tileYToBeDrawnProvider, zoomProvider, this.TILE_SIZE, this.TILE_SIZE, regionToBeInvalidated));
+                        tiles.Add(new HittaEniroMapProvider.MapTileInfo(zoomProvider, tileXToBeDrawn, tileYToBeDrawnProvider, ix, iy, this.TILE_SIZE, this.TILE_SIZE, regionToBeInvalidated));
                     }
                 }
             }
