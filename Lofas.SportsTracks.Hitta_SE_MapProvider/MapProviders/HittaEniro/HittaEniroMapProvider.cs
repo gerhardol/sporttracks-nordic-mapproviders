@@ -61,6 +61,7 @@ namespace Lofas.SportsTracks.Hitta_SE_MapProvider
             }
         }
 
+        public static string LantmaterietAccessKey = "";
         private class ProviderInfo
         {
             public readonly SwedishMapProvider SwedishMapProvider;
@@ -76,7 +77,7 @@ namespace Lofas.SportsTracks.Hitta_SE_MapProvider
             public readonly int MAX_ZOOMLEVEL;
             public readonly int TILE_SIZE = 256;
             public readonly string HttpAuthToken;
-            public readonly string HttpUserAgent; 
+            public readonly string HttpUserAgent;
 
             public ProviderInfo(SwedishMapProvider provider, MapViewType mapViewType)
             {
@@ -199,11 +200,10 @@ namespace Lofas.SportsTracks.Hitta_SE_MapProvider
 
                 if (provider == SwedishMapProvider.Lantmateriet)
                 {
-                    //Lantmäteriet Zoomlevel 9 is 8m (2^3)
-                    MAX_ZOOMLEVEL = this.MinimumZoom + 3;
+                    //Lantmäteriet Zoomlevel is 9-0, with9 is 8m / pixel
+                    MAX_ZOOMLEVEL = this.MaximumZoom;
                     //TILE_SIZE = 256;
-                    //TBD: Make access key configurable
-                    HttpAuthToken = "";//"Bearer " + "";
+                    HttpAuthToken = "Bearer " + LantmaterietAccessKey;
                     HttpUserAgent = "";
                 }
                 else

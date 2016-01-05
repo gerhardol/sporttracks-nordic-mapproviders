@@ -46,6 +46,11 @@ namespace Lofas.SportsTracks.Hitta_SE_MapProvider
 
         public void ReadOptions(System.Xml.XmlDocument xmlDoc, System.Xml.XmlNamespaceManager nsmgr, System.Xml.XmlElement pluginNode)
         {
+            String attr;
+            //attr = pluginNode.GetAttribute(xmlTags.settingsVersion);
+            //if (attr.Length > 0) { settingsVersion = (Int16)XmlConvert.ToInt16(attr); }
+            attr = pluginNode.GetAttribute(xmlTags.sLantmaterietAccessKey);
+            if (attr.Length > 0) { HittaEniroMapProvider.LantmaterietAccessKey = attr; }
         }
 
         public string Version
@@ -55,8 +60,15 @@ namespace Lofas.SportsTracks.Hitta_SE_MapProvider
 
         public void WriteOptions(System.Xml.XmlDocument xmlDoc, System.Xml.XmlElement pluginNode)
         {
+            pluginNode.SetAttribute(xmlTags.settingsVersion, XmlConvert.ToString(1));
+            pluginNode.SetAttribute(xmlTags.sLantmaterietAccessKey, HittaEniroMapProvider.LantmaterietAccessKey);
         }
 
         #endregion
+        private class xmlTags
+        {
+            public const string settingsVersion = "settingsVersion";
+            public const string sLantmaterietAccessKey = "sLantmaterietAccessKey";
+        }
     }
 }
