@@ -97,16 +97,16 @@ namespace Lofas.Projection
         /// <summary>
         /// Transform from WGS84 Coordinates to Sweref99TM projection
         /// </summary>
-        /// <param name="lat">Easting in WGS84</param>
-        /// <param name="lon">Northing in WGS84</param>
+        /// <param name="lon">Easting in WGS84</param>
+        /// <param name="lat">Northing in WGS84</param>
         /// <param name="height">Height in WGS84</param>
         /// <param name="swref99X">Sweref99TM X (Easting)</param>
         /// <param name="sweref99Y">Sweref99TM Y (Northing)</param>
-        public static void WGS84ToSWEREF99TM(double lat, double lon, double height, out double swref99X, out double sweref99Y)
+        public static void WGS84ToSWEREF99TM(double lat, double lon, out double swref99X, out double sweref99Y)
         {
             double y = lat * deg2rad;
             double x = lon * deg2rad;
-            double z = height;
+            //double z = height;
             double lam = 0, phi = 0/*, h = 0*/;
             double /*src_a, src_es,*/ dst_a, dst_es;
             double lam0, k0, esp, ml0, fr_meter, x0, y0;
@@ -132,11 +132,11 @@ namespace Lofas.Projection
 
             ml0 = 0.0;
 
-            phi = x;
-            lam = y;
-            project(ref x, ref y, ref phi, ref lam, lam0, dst_es, k0, esp, ml0, fr_meter, dst_a, x0, y0, en);
-            swref99X = x;
-            sweref99Y = y;
+            phi = y;
+            lam = x;
+            project(ref y, ref x, ref phi, ref lam, lam0, dst_es, k0, esp, ml0, fr_meter, dst_a, x0, y0, en);
+            swref99X = y;
+            sweref99Y = x;
         }
 
         /// <summary>
@@ -159,7 +159,7 @@ namespace Lofas.Projection
         {
             double lat, lon;
             CFProjection.RT90ToWGS84(x, y, out lat, out lon);
-            CFProjection.WGS84ToSWEREF99TM(lat, lon, 0, out x, out y);
+            CFProjection.WGS84ToSWEREF99TM(lat, lon, out x, out y);
         }
 
         /// <summary>
@@ -167,8 +167,8 @@ namespace Lofas.Projection
         /// </summary>
         /// <param name="x">SWEREF99TM X (Easting)</param>
         /// <param name="y">SWEREF99TM Y (Northing)</param>
-        /// <param name="lat">WGS84 Lat (easting)</param>
-        /// <param name="lon">WGS84 Lon (northing)</param>
+        /// <param name="lon">WGS84 Lon (easting)</param>
+        /// <param name="lat">WGS84 Lat (northing)</param>
         public static void SWEREF99TMToWGS84(double x, double y, out double lat, out double lon)
         {
             double lam = 0, phi = 0/*, h = 0*/;
@@ -177,7 +177,7 @@ namespace Lofas.Projection
             double[] en;
             double ra;
 
-            lat = lon = 0;
+            lon = lat = 0;
 
             ra = 1.5678559428873979e-007;
 
@@ -247,8 +247,8 @@ namespace Lofas.Projection
             x = lam;
             y = phi;
 
-            lat = x * rad2deg;
-            lon = y * rad2deg;
+            lon = x * rad2deg;
+            lat = y * rad2deg;
         }
 
         /// <summary>
