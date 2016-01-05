@@ -20,6 +20,8 @@
     <Compile Include="Common\STWebClient.cs">
       <SubType>Component</SubType>
     </Compile>
+    <Compile Include="MapProviders\HittaEniro\INordicMapProjection.cs" />
+    <Compile Include="MapProviders\HittaEniro\LantmaterietMapProjection.cs" />
     <Compile Include="MapProviders\HittaEniro\HittaEniroMapProvider.cs" />
     <Compile Include="MapProviders\HittaEniro\HittaEniroMapProjection.cs" />
     <Compile Include="MapProviders\Lofas.Projection.CFProjection.cs" />
