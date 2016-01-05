@@ -44,7 +44,7 @@ namespace Lofas.SportsTracks.Hitta_SE_MapProvider
         //Invalidating the regions for fetched tiles must be done on the main thread
         private AsyncOperation m_operOnMainThread = null;
 
-        private readonly HittaEniroMapProjection m_MapProjection;
+        private readonly INordicMapProjection m_MapProjection;
 
         private readonly ProviderInfo m_providerInfo;
         #endregion
@@ -172,12 +172,10 @@ namespace Lofas.SportsTracks.Hitta_SE_MapProvider
 
                     case SwedishMapProvider.Lantmateriet:
                         {
-                            //KVP
-                            //baseUrl += "?SERVICE=WMTS&REQUEST=GetTile&VERSION=1.0.0&LAYER=topowebb&STYLE=default&TILEMATRIXSET=3006&TILEMATRIX={0}&TILEROW={1}&TILECOL={2}&FORMAT=image/png";
-                            //REST
-                            //baseUrl += "1.0.0/topowebb/default/3006/{0}/{1}/{2}.png";
-                            //url = string.Format(baseUrl, tile.zoomlevel, tile.pixTileX, tile.pixTileY);
-                            baseUrl = "https://api.lantmateriet.se/open/topowebb-ccby/v1/wmts/1.0.0/topowebb/{1}/3006/{2}/{3}/{4}{5}";
+                            //KVP style URL (using REST)
+                            //"?SERVICE=WMTS&REQUEST=GetTile&VERSION=1.0.0&LAYER=topowebb&STYLE=default&TILEMATRIXSET=3006&TILEMATRIX={0}&TILEROW={1}&TILECOL={2}&FORMAT=image/png";
+                            //Note that the url is .../Zoom/Y/X, tiles stored as Z/x_Y to be the same as Hitta/Eniro
+                            baseUrl = "https://api.lantmateriet.se/open/topowebb-ccby/v1/wmts/1.0.0/topowebb/{1}/3006/{2}/{4}/{3}{5}";
                             switch (mapViewType)
                             {
                                 case MapViewType.Terrain:
@@ -246,7 +244,6 @@ namespace Lofas.SportsTracks.Hitta_SE_MapProvider
                 string url = string.Format(baseUrl, serverIndex, ViewTypeInUrl, tile.provZoom, tile.provTileX, tile.provTileY, ext);
                 return url;
             }
-
         }
 
         public bool Configured
@@ -273,7 +270,14 @@ namespace Lofas.SportsTracks.Hitta_SE_MapProvider
             m_operOnMainThread = AsyncOperationManager.CreateOperation(null);
             m_DownloadQueueItems = new Dictionary<string, string>();
             m_providerInfo = new ProviderInfo(provider, mapViewType);
-            m_MapProjection = new HittaEniroMapProjection(m_providerInfo.MAX_ZOOMLEVEL, m_providerInfo.TILE_SIZE);
+            if (provider == SwedishMapProvider.Lantmateriet)
+            {
+                m_MapProjection = new LantmaterietMapProjection(m_providerInfo.MAX_ZOOMLEVEL, m_providerInfo.TILE_SIZE);
+            }
+            else
+            {
+                m_MapProjection = new HittaEniroMapProjection(m_providerInfo.MAX_ZOOMLEVEL, m_providerInfo.TILE_SIZE);
+            }
         }
 
         //Eniro/Hitta has the same type of identification
@@ -303,23 +307,20 @@ namespace Lofas.SportsTracks.Hitta_SE_MapProvider
                            Rectangle clipRect, IGPSLocation center, double zoom)
         {
             int numberOfTilesQueued = 0;
-            if (HittaEniroMapProjection.IsValidLocation(center))
+            foreach (MapTileInfo t in this.m_MapProjection.GetTileInfo(drawRect, zoom, center))
             {
-                foreach (MapTileInfo t in this.m_MapProjection.GetTileInfo(drawRect, zoom, center))
+                // Find out if the tile is cached on disk or needs to be downloaded from the map provider.
+                if (IsCached(t.provZoom, t.provTileX, t.provTileY))
                 {
-                    // Find out if the tile is cached on disk or needs to be downloaded from the map provider.
-                    if (IsCached(t.provZoom, t.provTileX, t.provTileY))
+                    Image img = GetImageFromCache(t.provZoom, t.provTileX, t.provTileY);
+                    graphics.DrawImage(img, t.iTileX, t.iTileY, t.widthX, t.heightY);
+                    img.Dispose();
+                }
+                else
+                {
+                    if (QueueDownload(new QueueInfo(t, readyListener)))
                     {
-                        Image img = GetImageFromCache(t.provZoom, t.provTileX, t.provTileY);
-                        graphics.DrawImage(img, t.iTileX, t.iTileY, t.widthX, t.heightY);
-                        img.Dispose();
-                    }
-                    else
-                    {
-                        if(QueueDownload(new QueueInfo(t, readyListener)))
-                        {
-                            numberOfTilesQueued++;
-                        }
+                        numberOfTilesQueued++;
                     }
                 }
             }
@@ -375,21 +376,18 @@ namespace Lofas.SportsTracks.Hitta_SE_MapProvider
         /// </summary>
         public void Refresh(Rectangle drawRectangle, IGPSLocation center, double zoomLevel)
         {
-            if (HittaEniroMapProjection.IsValidLocation(center))
+            foreach (MapTileInfo t in this.m_MapProjection.GetTileInfo(drawRectangle, zoomLevel, center))
             {
-                foreach (MapTileInfo t in this.m_MapProjection.GetTileInfo(drawRectangle, zoomLevel, center))
+                if (IsCached(t.provZoom, t.provTileX, t.provTileY))
                 {
-                    if (IsCached(t.provZoom, t.provTileX, t.provTileY))
-                    {
-                        string str = GetFilePath(t.provZoom, t.provTileX, t.provTileY);
+                    string str = GetFilePath(t.provZoom, t.provTileX, t.provTileY);
 
-                        try
-                        {
-                            File.Delete(str);
-                        }
-                        catch (Exception)
-                        {
-                        }
+                    try
+                    {
+                        File.Delete(str);
+                    }
+                    catch (Exception)
+                    {
                     }
                 }
             }
