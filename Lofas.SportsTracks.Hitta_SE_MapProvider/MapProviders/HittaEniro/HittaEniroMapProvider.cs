@@ -75,7 +75,6 @@ namespace Lofas.SportsTracks.Hitta_SE_MapProvider
 
             private readonly string baseUrl;
             public readonly int MAX_ZOOMLEVEL;
-            public readonly int TILE_SIZE = 256;
             public readonly string HttpAuthToken;
             public readonly string HttpUserAgent;
 
@@ -187,7 +186,7 @@ namespace Lofas.SportsTracks.Hitta_SE_MapProvider
                                         ViewTypeInUrl = "default";
                                         mapProviderAbbreviation = "LantmaterietTopo";
                                         MaximumZoom = 12;
-                                        MinimumZoom = 3;
+                                        MinimumZoom = 1;
                                         break;
                                     }
                             }
@@ -200,16 +199,14 @@ namespace Lofas.SportsTracks.Hitta_SE_MapProvider
 
                 if (provider == SwedishMapProvider.Lantmateriet)
                 {
-                    //Lantmäteriet Zoomlevel is 9-0, with9 is 8m / pixel
+                    //Max zoom out, to map to projection max zoom
                     MAX_ZOOMLEVEL = this.MaximumZoom;
-                    //TILE_SIZE = 256;
                     HttpAuthToken = "Bearer " + LantmaterietAccessKey;
                     HttpUserAgent = "";
                 }
                 else
                 {
                     MAX_ZOOMLEVEL = 20;
-                    //TILE_SIZE = 256;
                     HttpAuthToken = "";
                     HttpUserAgent = "Mozilla/5.0 (Windows NT 6.3; WOW64; rv:37.0) Gecko/20100101 Firefox/37.0";
                 }
@@ -272,11 +269,11 @@ namespace Lofas.SportsTracks.Hitta_SE_MapProvider
             m_providerInfo = new ProviderInfo(provider, mapViewType);
             if (provider == SwedishMapProvider.Lantmateriet)
             {
-                m_MapProjection = new LantmaterietMapProjection(m_providerInfo.MAX_ZOOMLEVEL, m_providerInfo.TILE_SIZE);
+                m_MapProjection = new LantmaterietMapProjection(m_providerInfo.MAX_ZOOMLEVEL);
             }
             else
             {
-                m_MapProjection = new HittaEniroMapProjection(m_providerInfo.MAX_ZOOMLEVEL, m_providerInfo.TILE_SIZE);
+                m_MapProjection = new HittaEniroMapProjection(m_providerInfo.MAX_ZOOMLEVEL);
             }
         }
 
@@ -577,7 +574,7 @@ namespace Lofas.SportsTracks.Hitta_SE_MapProvider
                 {
                 }
 
-                return new Bitmap(this.m_providerInfo.TILE_SIZE, this.m_providerInfo.TILE_SIZE);
+                return new Bitmap(this.m_MapProjection.TileSize(zoomLevel), this.m_MapProjection.TileSize(zoomLevel));
             }
         }
 

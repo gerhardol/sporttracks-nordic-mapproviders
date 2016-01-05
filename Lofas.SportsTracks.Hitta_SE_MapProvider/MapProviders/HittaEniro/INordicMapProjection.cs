@@ -31,5 +31,6 @@ namespace Lofas.SportsTracks.Hitta_SE_MapProvider
     public interface INordicMapProjection : IMapProjection
     {
         IEnumerable<HittaEniroMapProvider.MapTileInfo> GetTileInfo(Rectangle drawRect, double zoomST, IGPSLocation center);
+        int TileSize(double zoomST);
     }
 }

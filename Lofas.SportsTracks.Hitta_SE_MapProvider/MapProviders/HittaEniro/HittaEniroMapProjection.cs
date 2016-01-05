@@ -31,12 +31,11 @@ namespace Lofas.SportsTracks.Hitta_SE_MapProvider
         // Följande GPS-pos skickas in 60,63974;16,96524 och det ger punkten -186;-65
 
         private readonly int MAX_ZOOMLEVEL;
-        private readonly int TILE_SIZE;
+        private readonly int TILE_SIZE = 256;
 
-        public HittaEniroMapProjection(int maxZoom, int tileWidth)
+        public HittaEniroMapProjection(int maxZoom)
         {
             MAX_ZOOMLEVEL = maxZoom;
-            TILE_SIZE = tileWidth;
         }
         #region IMapProjection Members
 
@@ -115,13 +114,18 @@ namespace Lofas.SportsTracks.Hitta_SE_MapProvider
 
         #endregion
 
+        public int TileSize(double zoomST)
+        {
+            return TILE_SIZE;
+        }
+
         /// <summary>
         /// Find out the x-pixel of a specific longitude
         /// </summary>
         /// <param name="longitude"></param>
         /// <param name="zoom"></param>
         /// <returns></returns>
-        public long Xpixel(double longitude, double zoom)
+        private long Xpixel(double longitude, double zoom)
         {
             if (zoom > MAX_ZOOMLEVEL)
             {
@@ -130,7 +134,7 @@ namespace Lofas.SportsTracks.Hitta_SE_MapProvider
 
             // Instead of -180 to +180, we want 0 to 360
             double dlng = longitude + 180;
-            double dxpixel = dlng / 360.0 * TILE_SIZE * Math.Pow(2, zoom);
+            double dxpixel = dlng / 360.0 * TileSize(zoom) * Math.Pow(2, zoom);
             long xpixel = Convert.ToInt32(Math.Floor(dxpixel));
             return xpixel;
         }
@@ -141,7 +145,7 @@ namespace Lofas.SportsTracks.Hitta_SE_MapProvider
         /// <param name="latitude"></param>
         /// <param name="zoom"></param>
         /// <returns></returns>
-        public long Ypixel(double latitude, double zoom)
+        private long Ypixel(double latitude, double zoom)
         {
             if (zoom > MAX_ZOOMLEVEL)
             {
@@ -152,7 +156,7 @@ namespace Lofas.SportsTracks.Hitta_SE_MapProvider
 
             // PI/360 == degrees -&gt; radians
             // The trig functions are done with radians
-            double dypixel = TILE_SIZE * (ypixelcenter - Math.Log(Math.Tan(latitude * Math.PI / 360 + Math.PI / 4)) * ypixelcenter / Math.PI);
+            double dypixel = TileSize(zoom) * (ypixelcenter - Math.Log(Math.Tan(latitude * Math.PI / 360 + Math.PI / 4)) * ypixelcenter / Math.PI);
             long ypixel = Convert.ToInt32(Math.Floor(dypixel));
             return ypixel;
         }
@@ -163,9 +167,9 @@ namespace Lofas.SportsTracks.Hitta_SE_MapProvider
         /// <param name="longitude"></param>
         /// <param name="zoom"></param>
         /// <returns></returns>
-        public int XTile(double longitude, double zoom)
+        private int XTile(double longitude, double zoom)
         {
-            return Convert.ToInt32(Math.Floor((double)Xpixel(longitude, zoom) / TILE_SIZE));
+            return Convert.ToInt32(Math.Floor((double)Xpixel(longitude, zoom) / TileSize(zoom)));
         }
 
         /// <summary>
@@ -174,9 +178,9 @@ namespace Lofas.SportsTracks.Hitta_SE_MapProvider
         /// <param name="latitude"></param>
         /// <param name="zoom"></param>
         /// <returns></returns>
-        public int YTile(double latitude, double zoom)
+        private int YTile(double latitude, double zoom)
         {
-            return Convert.ToInt32(Math.Floor((double)Ypixel(latitude, zoom) / TILE_SIZE));
+            return Convert.ToInt32(Math.Floor((double)Ypixel(latitude, zoom) / TileSize(zoom)));
         }
 
         /// <summary>
@@ -184,9 +188,9 @@ namespace Lofas.SportsTracks.Hitta_SE_MapProvider
         /// </summary>
         /// <param name="tile"></param>
         /// <returns></returns>
-        public long PixelOfNorthWestCornerOfTile(long tile)
+        private long PixelOfNorthWestCornerOfTile(long tile)
         {
-            return tile * TILE_SIZE;
+            return tile * TileSize(-1);
         }
 
         /// <summary>
@@ -195,11 +199,11 @@ namespace Lofas.SportsTracks.Hitta_SE_MapProvider
         /// <param name="y"></param>
         /// <param name="zoom"></param>
         /// <returns></returns>
-        public float YToLatitude(long y, double zoom)
+        private float YToLatitude(long y, double zoom)
         {
             double w = Math.Pow(2, zoom - 1);
             double dy = Convert.ToDouble(y);
-            double num0 = Math.PI * (w - dy / TILE_SIZE);
+            double num0 = Math.PI * (w - dy / TileSize(zoom));
             double num1 = Math.Atan(Math.Exp(num0 / w)) - Math.PI / 4;
             double latitude = 360 * num1 / Math.PI;
             return (float)latitude;
@@ -211,11 +215,11 @@ namespace Lofas.SportsTracks.Hitta_SE_MapProvider
         /// <param name="X"></param>
         /// <param name="zoom"></param>
         /// <returns></returns>
-        public float XToLongitude(long X, double zoom)
+        private float XToLongitude(long X, double zoom)
         {
             double dx = Convert.ToDouble(X);
 
-            return (float) ((360*dx)/(TILE_SIZE*Math.Pow(2, zoom)) - 180);
+            return (float) ((360*dx)/(TileSize(zoom)*Math.Pow(2, zoom)) - 180);
         }
 
         /// <summary>
@@ -229,6 +233,7 @@ namespace Lofas.SportsTracks.Hitta_SE_MapProvider
             {
                 // Convert the zoom level to match the zoom-levels of the map provider.
                 double zoomProvider = this.MAX_ZOOMLEVEL - zoomST;
+                int tileSize = this.TileSize(zoomST);
 
                 long xTileOfCenter = XTile(center.LongitudeDegrees, zoomProvider);
                 long yTileOfCenter = YTile(center.LatitudeDegrees, zoomProvider);
@@ -246,17 +251,17 @@ namespace Lofas.SportsTracks.Hitta_SE_MapProvider
                                                                             yPixelOffsetCenterVsNWCornerOfCenterTile;
 
                 var noOfTilesToBeDrawnToTheLeftOfCenterTile =
-                    (int)Math.Ceiling((double)xPixelsFromLeftEdgeOfDrawingAreaToLeftEdgeOfCenterTile / this.TILE_SIZE);
+                    (int)Math.Ceiling((double)xPixelsFromLeftEdgeOfDrawingAreaToLeftEdgeOfCenterTile / tileSize);
                 var noOfTilesToBeDrawnAboveOfCenterTile =
-                    (int)Math.Ceiling((double)yPixelsFromTopEdgeOfDrawingAreaToTopEdgeOfCenterTile / this.TILE_SIZE);
+                    (int)Math.Ceiling((double)yPixelsFromTopEdgeOfDrawingAreaToTopEdgeOfCenterTile / tileSize);
 
                 var xNWStartPixel = xPixelsFromLeftEdgeOfDrawingAreaToLeftEdgeOfCenterTile -
-                                     (this.TILE_SIZE * noOfTilesToBeDrawnToTheLeftOfCenterTile);
+                                     (tileSize * noOfTilesToBeDrawnToTheLeftOfCenterTile);
                 var yNWStartPixel = yPixelsFromTopEdgeOfDrawingAreaToTopEdgeOfCenterTile -
-                                     (this.TILE_SIZE * noOfTilesToBeDrawnAboveOfCenterTile);
+                                     (tileSize * noOfTilesToBeDrawnAboveOfCenterTile);
 
-                var noOfTilesToBeDrawnHorizontally = (int)Math.Ceiling((double)drawRect.Width / this.TILE_SIZE + 1);
-                var noOfTilesToBeDrawnVertically = (int)Math.Ceiling((double)drawRect.Height / this.TILE_SIZE + 1);
+                var noOfTilesToBeDrawnHorizontally = (int)Math.Ceiling((double)drawRect.Width / tileSize + 1);
+                var noOfTilesToBeDrawnVertically = (int)Math.Ceiling((double)drawRect.Height / tileSize + 1);
                 var startXTile = xTileOfCenter - noOfTilesToBeDrawnToTheLeftOfCenterTile;
                 var startYTile = yTileOfCenter - noOfTilesToBeDrawnAboveOfCenterTile;
 
@@ -277,10 +282,10 @@ namespace Lofas.SportsTracks.Hitta_SE_MapProvider
                         long tileXToBeDrawn = startXTile + x;
                         long tileYToBeDrawn = startYTile + y;
                         long tileYToBeDrawnProvider = (long)Math.Pow(2, zoomProvider) - 1 - tileYToBeDrawn;
-                        long ix = xNWStartPixel + x * this.TILE_SIZE;
-                        long iy = yNWStartPixel + y * this.TILE_SIZE;
+                        long ix = xNWStartPixel + x * tileSize;
+                        long iy = yNWStartPixel + y * tileSize;
 
-                        tiles.Add(new HittaEniroMapProvider.MapTileInfo(zoomProvider, tileXToBeDrawn, tileYToBeDrawnProvider, ix, iy, this.TILE_SIZE, this.TILE_SIZE, regionToBeInvalidated));
+                        tiles.Add(new HittaEniroMapProvider.MapTileInfo(zoomProvider, tileXToBeDrawn, tileYToBeDrawnProvider, ix, iy, tileSize, tileSize, regionToBeInvalidated));
                     }
                 }
             }

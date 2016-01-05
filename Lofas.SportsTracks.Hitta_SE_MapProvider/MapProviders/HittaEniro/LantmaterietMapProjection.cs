@@ -26,12 +26,12 @@ namespace Lofas.SportsTracks.Hitta_SE_MapProvider
 {
     public class LantmaterietMapProjection : INordicMapProjection
     {
-        private readonly int MAX_ZOOMLEVEL;
-        private readonly int TILE_SIZE;
-        public LantmaterietMapProjection(int maxZoom, int tileWidth)
+        private readonly int MAX_ST_ZOOMLEVEL;
+        private const int MAX_LM_ZOOMLEVEL = 9;
+        private readonly int TILE_SIZE = 256;
+        public LantmaterietMapProjection(int maxZoom)
         {
-            MAX_ZOOMLEVEL = maxZoom;
-            TILE_SIZE = tileWidth;
+            MAX_ST_ZOOMLEVEL = maxZoom;
         }
 
         #region IMapProjection Members
@@ -40,7 +40,7 @@ namespace Lofas.SportsTracks.Hitta_SE_MapProvider
             double originX, originY, gpsX, gpsY;
             FromGPSLocation(origin, out originX, out originY);
             FromGPSLocation(gps, out gpsX, out gpsY);
-            double pxSz = pixelSize(zoomSTtoProvider(zoomST));
+            double pxSz = pixelSize(zoomST);
             int pixX = (int)Math.Round((gpsX - originX) / pxSz);
             int pixY = (int)Math.Round((originY - gpsY) / pxSz);
 
@@ -51,7 +51,7 @@ namespace Lofas.SportsTracks.Hitta_SE_MapProvider
         {
             double originX, originY;
             FromGPSLocation(origin, out originX, out originY);
-            double pxSz = pixelSize(zoomSTtoProvider(zoomST));
+            double pxSz = pixelSize(zoomST);
             double gpsX = originX + pxSz * pixel.X;
             double gpsY = originY - pxSz * pixel.Y;
 
@@ -74,18 +74,22 @@ namespace Lofas.SportsTracks.Hitta_SE_MapProvider
 
         private double zoomSTtoProvider(double zoomST)
         {
-            return MAX_ZOOMLEVEL - zoomST;
+            double zoomProvider = MAX_ST_ZOOMLEVEL - zoomST;
+            if (zoomProvider > MAX_LM_ZOOMLEVEL) { zoomProvider = MAX_LM_ZOOMLEVEL; }
+            return zoomProvider;
         }
 
-        private double pixelSize(double zoomProvider)
+        //Size of ST pixel, will be the same as physical tile up to MAX_LM_ZOOMLEVEL
+        private double pixelSize(double zoomST)
         {
-            //One pixel for Zoom level 0 is 4096m, 9 is 8m
-            return Math.Pow(2, 12-zoomProvider);
+            //One pixel for LM Zoom level 0 is 4096m, 9 is 8m
+            double zoom = MAX_ST_ZOOMLEVEL - zoomST;
+            return Math.Pow(2, 12 - zoom);
         }
 
         //The number of tiles are in the GetCapabilities wmts call
         //minTile is always 0, TileWidth/TileHeight is fixed to 256, BoundingBox coordinates fixed. ScaleDominator dont care
-        private int maxTile(double zoomProvider)
+        private int maxNoOfTiles(double zoomProvider)
         {
             return (int)Math.Pow(2, zoomProvider + 2) - 1;
         }
@@ -93,7 +97,30 @@ namespace Lofas.SportsTracks.Hitta_SE_MapProvider
         //No need to request tiles not existing
         private int limitTile(int tile, double zoomProvider)
         {
-            return tile < 0 ? 0 : tile > maxTile(zoomProvider) ? maxTile(zoomProvider) : tile;
+            return tile < 0 ? 0 : tile > maxNoOfTiles(zoomProvider) ? maxNoOfTiles(zoomProvider) : tile;
+        }
+
+        public int TileSize(double zoomST)
+        {
+            int sz = TILE_SIZE;
+            double zoom = MAX_ST_ZOOMLEVEL - zoomST;
+            if (zoom > MAX_LM_ZOOMLEVEL)
+            {
+                sz *= (int)Math.Pow(2, zoom - MAX_LM_ZOOMLEVEL);
+            }
+            return sz;
+        }
+
+        //Fix for overlap in overzoom
+        private int tileOverlap(double zoomST)
+        {
+            int sz = 0;
+            double zoom = MAX_ST_ZOOMLEVEL - zoomST;
+            if (zoom > MAX_LM_ZOOMLEVEL)
+            {
+                sz = (int)Math.Pow(2, zoom - MAX_LM_ZOOMLEVEL-1);
+            }
+            return sz;
         }
 
         public IEnumerable<HittaEniroMapProvider.MapTileInfo> GetTileInfo(Rectangle drawRect, double zoomST, IGPSLocation center)
@@ -101,7 +128,8 @@ namespace Lofas.SportsTracks.Hitta_SE_MapProvider
             IList<HittaEniroMapProvider.MapTileInfo> tiles = new List<HittaEniroMapProvider.MapTileInfo>();
 
             double zoomProvider = zoomSTtoProvider(zoomST);
-            double pxSz = pixelSize(zoomProvider);
+            double pxSz = pixelSize(zoomST);
+            int tileSize = this.TileSize(zoomST);
 
             double centerSweX, centerSweY;
             FromGPSLocation(center, out centerSweX, out centerSweY);
@@ -113,20 +141,20 @@ namespace Lofas.SportsTracks.Hitta_SE_MapProvider
             double pixNorthY = (boundSweY - centerSweY) / pxSz - drawRect.Height / 2;
             double pixSouthY = (boundSweY - centerSweY) / pxSz + drawRect.Height / 2;
 
-            int tileWestX = (int)Math.Floor(pixWestX / TILE_SIZE);
-            int tileEastX = (int)Math.Ceiling(pixEastX / TILE_SIZE);
-            int tileNorthY = (int)Math.Floor(pixNorthY / TILE_SIZE);
-            int tileSouthY = (int)Math.Ceiling(pixSouthY / TILE_SIZE);
+            int tileWestX = (int)Math.Floor(pixWestX / tileSize);
+            int tileEastX = (int)Math.Ceiling(pixEastX / tileSize);
+            int tileNorthY = (int)Math.Floor(pixNorthY / tileSize);
+            int tileSouthY = (int)Math.Ceiling(pixSouthY / tileSize);
 
             if (tileEastX < 0 || tileSouthY < 0 || 
-                tileWestX > maxTile(zoomProvider) || tileNorthY > maxTile(zoomProvider))
+                tileWestX > maxNoOfTiles(zoomProvider) || tileNorthY > maxNoOfTiles(zoomProvider))
             {
                 //Not within range, nothing to fetch
                 return tiles;
             }
             //The tile (normally) start outside the viewable frame, need the offset (before truncating)
-            int pixTileX = drawRect.X + TILE_SIZE * tileWestX - (int)(pixWestX);
-            int pixTileY = drawRect.Y + TILE_SIZE * tileNorthY - (int)(pixNorthY);
+            int pixTileX = drawRect.X + tileSize * tileWestX - (int)(pixWestX);
+            int pixTileY = drawRect.Y + tileSize * tileNorthY - (int)(pixNorthY);
             tileWestX = limitTile(tileWestX, zoomProvider);
             tileEastX = limitTile(tileEastX, zoomProvider);
             tileNorthY = limitTile(tileNorthY, zoomProvider);
@@ -140,14 +168,15 @@ namespace Lofas.SportsTracks.Hitta_SE_MapProvider
             IGPSLocation southEastLocation = PixelToGPS(center, zoomST, southEastPoint);
             IGPSBounds regionToBeInvalidated = new GPSBounds(northWestLocation, southEastLocation);
 
+            int tileXtra = tileOverlap(zoomST);
             for (int x = tileWestX; x <= tileEastX; x++)
             {
                 for (int y = tileNorthY; y <= tileSouthY; y++)
                 {
-                    long ix = TILE_SIZE * (x - tileWestX) + pixTileX;
-                    long iy = TILE_SIZE * (y - tileNorthY) + pixTileY;
+                    long ix = tileSize * (x - tileWestX) + pixTileX;
+                    long iy = tileSize * (y - tileNorthY) + pixTileY;
 
-                    tiles.Add(new HittaEniroMapProvider.MapTileInfo(zoomProvider, x, y, ix, iy, this.TILE_SIZE, this.TILE_SIZE, regionToBeInvalidated));
+                    tiles.Add(new HittaEniroMapProvider.MapTileInfo(zoomProvider, x, y, ix, iy, tileSize + tileXtra, tileSize + tileXtra, regionToBeInvalidated));
                 }
             }
             return tiles;
