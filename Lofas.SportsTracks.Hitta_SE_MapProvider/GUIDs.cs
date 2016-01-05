@@ -22,5 +22,6 @@ namespace Lofas.SportsTracks
 {
 	class GUIDs {
         public static readonly Guid PluginMain = new Guid("BA45D36B-CC00-4dcf-8768-E24237ADCA4B");
+        public static readonly Guid Settings = new Guid("FF8EA643-95BF-4AD9-B7AE-6419C109530E");
     }
 }

@@ -1,6 +1,5 @@
 ﻿/*
-Copyright (C) 2008, 2009, 2010 Peter Löfås
-Copyright (C) 2008, 2009, 2015 Gerhard Olsson
+Copyright (C) 2016 Gerhard Olsson
 
 This library is free software; you can redistribute it and/or
 modify it under the terms of the GNU Lesser General Public

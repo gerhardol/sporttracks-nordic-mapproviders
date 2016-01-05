@@ -41,7 +41,7 @@ namespace Lofas.SportsTracks.Hitta_SE_MapProvider
 
         public string Name
         {
-            get { return "Hitta.se / Eniro.se MapProvider (Sweden)"; }
+            get { return Properties.Resources.ApplicationName; }
         }
 
         public void ReadOptions(System.Xml.XmlDocument xmlDoc, System.Xml.XmlNamespaceManager nsmgr, System.Xml.XmlElement pluginNode)
@@ -50,7 +50,14 @@ namespace Lofas.SportsTracks.Hitta_SE_MapProvider
             //attr = pluginNode.GetAttribute(xmlTags.settingsVersion);
             //if (attr.Length > 0) { settingsVersion = (Int16)XmlConvert.ToInt16(attr); }
             attr = pluginNode.GetAttribute(xmlTags.sLantmaterietAccessKey);
-            if (attr.Length > 0) { HittaEniroMapProvider.LantmaterietAccessKey = attr; }
+            if (attr.Length > 0) {
+                HittaEniroMapProvider.LantmaterietAccessKey = attr;
+            }
+            else
+            {
+                //A default key with user sporttracks-plugin
+                HittaEniroMapProvider.LantmaterietAccessKey = "ff3e84bbf924c3348d6460ec99751888";
+            }
         }
 
         public string Version

@@ -4,7 +4,7 @@
     <ProjectGuid>{029C4C45-BA8E-4BB4-828D-34717ACE9DBA}</ProjectGuid>
     <OutputType>Library</OutputType>
     <AppDesignerFolder>Properties</AppDesignerFolder>
-    <RootNamespace>Lofas.SportsTracks.Hitta_SE_MapProvider</RootNamespace>
+    <RootNamespace>Lofas</RootNamespace>
     <AssemblyName>Lofas.SportsTracks.Hitta_SE_MapProvider</AssemblyName>
     <PluginId>BA45D36B-CC00-4dcf-8768-E24237ADCA4B</PluginId>
   </PropertyGroup>
@@ -34,12 +34,24 @@
       <DesignTime>True</DesignTime>
       <DependentUpon>Resources.resx</DependentUpon>
     </Compile>
+    <Compile Include="Settings\ExtendSettingsPages.cs" />
+    <Compile Include="Settings\SettingsPage.cs" />
+    <Compile Include="Settings\SettingsPageControl.cs">
+      <SubType>UserControl</SubType>
+    </Compile>
+    <Compile Include="Settings\SettingsPageControl.Designer.cs">
+      <DependentUpon>SettingsPageControl.cs</DependentUpon>
+    </Compile>
   </ItemGroup>
   <ItemGroup>
     <EmbeddedResource Include="Properties\Resources.resx">
       <SubType>Designer</SubType>
       <Generator>ResXFileCodeGenerator</Generator>
       <LastGenOutput>Resources.Designer.cs</LastGenOutput>
+    </EmbeddedResource>
+    <EmbeddedResource Include="Settings\SettingsPageControl.resx">
+      <DependentUpon>SettingsPageControl.cs</DependentUpon>
+      <SubType>Designer</SubType>
     </EmbeddedResource>
   </ItemGroup>
   <ItemGroup />
