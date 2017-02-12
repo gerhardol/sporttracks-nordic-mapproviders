@@ -220,7 +220,7 @@ namespace Lofas.SportsTracks.Hitta_SE_MapProvider
                     Path.DirectorySeparatorChar + mapProviderAbbreviation);
             }
 
-            public string tileUrl(MapTileInfo tile)
+            public string TileUrl(MapTileInfo tile)
             {
                 string serverIndex;
                 string ext;
@@ -278,7 +278,7 @@ namespace Lofas.SportsTracks.Hitta_SE_MapProvider
         }
 
         //Eniro/Hitta has the same type of identification
-        private string tileId(MapTileInfo tile) { return m_providerInfo.ViewTypeInUrl + "/" + tile.provZoom + "/" + tile.provTileX + "/" + tile.provTileY; }
+        private string TileId(MapTileInfo tile) { return m_providerInfo.ViewTypeInUrl + "/" + tile.provZoom + "/" + tile.provTileX + "/" + tile.provTileY; }
 
         #region IMapTileProvider Members
 
@@ -436,23 +436,25 @@ namespace Lofas.SportsTracks.Hitta_SE_MapProvider
         {
             bool queued = false;
 
-            if (!m_DownloadQueueItems.ContainsKey(tileId(queueInfo.tileInfo)))
+            if (!m_DownloadQueueItems.ContainsKey(TileId(queueInfo.tileInfo)))
             {
                 queued = true;
-                m_DownloadQueueItems.Add(tileId(queueInfo.tileInfo), "");
+                m_DownloadQueueItems.Add(TileId(queueInfo.tileInfo), "");
                 ThreadPool.QueueUserWorkItem(new WaitCallback(DownloadWorker), queueInfo);
             }
             return queued;
         }
+
+        private static readonly object _lock = new object();
 
         private void DownloadWorker(object queueInfoObject)
         {
             QueueInfo queueInfo = queueInfoObject as QueueInfo;
             try
             {
-                lock (STWebClient.Instance)
+                lock (_lock)
                 {
-                    if (m_DownloadQueueItems.ContainsKey(tileId(queueInfo.tileInfo)))
+                    if (m_DownloadQueueItems.ContainsKey(TileId(queueInfo.tileInfo)))
                     {
                         if (!string.IsNullOrEmpty(this.m_providerInfo.HttpUserAgent))
                         {
@@ -471,7 +473,7 @@ namespace Lofas.SportsTracks.Hitta_SE_MapProvider
                             STWebClient.Instance.Headers.Remove("Authorization");
                         }
 
-                        string url = this.m_providerInfo.tileUrl(queueInfo.tileInfo);
+                        string url = this.m_providerInfo.TileUrl(queueInfo.tileInfo);
                         Image img = Image.FromStream(STWebClient.Instance.OpenRead(url));
                         img.Save(GetFilePath(queueInfo.tileInfo.provZoom, queueInfo.tileInfo.provTileX, queueInfo.tileInfo.provTileY, true));
                         img.Dispose();
@@ -485,7 +487,7 @@ namespace Lofas.SportsTracks.Hitta_SE_MapProvider
             catch (Exception e)
             {
             }
-            m_DownloadQueueItems.Remove(tileId(queueInfo.tileInfo));
+            m_DownloadQueueItems.Remove(TileId(queueInfo.tileInfo));
         }
 
         private void InvalidateRegion(object queueInfoObject)

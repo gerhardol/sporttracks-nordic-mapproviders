@@ -8,6 +8,11 @@
     <AssemblyName>Lofas.SportsTracks.Hitta_SE_MapProvider</AssemblyName>
     <PluginId>BA45D36B-CC00-4dcf-8768-E24237ADCA4B</PluginId>
   </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)' == 'ST3.0Debug|x86'">
+    <DefineConstants>DEBUG</DefineConstants>
+    <DebugType>full</DebugType>
+    <DebugSymbols>true</DebugSymbols>
+  </PropertyGroup>
   <Import Project="..\Common\Common-References.csproj" />
   <ItemGroup>
     <Reference Include="Microsoft.JScript">
